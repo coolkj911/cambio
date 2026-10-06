@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cambio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg:#FAF9FE;
+    --frame:#EEEAF7;
+    --surface:#FFFFFF;
+    --surface-2:#F2EEFA;
+    --ink:#26223A;
+    --ink-soft:#726B8C;
+    --ink-faint:#A79FC4;
+    --line:#E9E4F5;
+    --accent:#6E5DE7;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#ECE8FD;
+    --spend:#FF6D8F;
+    --spend-soft:#FFE7EC;
+    --income:#1FB9A3;
+    --income-soft:#DEF7F1;
+    --warn:#E7A93D;
+    --shadow: 0 1px 2px rgba(38,34,58,.04), 0 10px 30px -12px rgba(38,34,58,.18);
+    --shadow-lg: 0 20px 48px -16px rgba(38,34,58,.28);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#100E1C;
+      --frame:#100E1C;
+      --surface:#1C1830;
+      --surface-2:#241F3B;
+      --ink:#F3F0FB;
+      --ink-soft:#B0A8CC;
+      --ink-faint:#756D96;
+      --line:#332C50;
+      --accent:#9B8CFF;
+      --accent-ink:#171331;
+      --accent-soft:#2A2450;
+      --spend:#FF93AC;
+      --spend-soft:#3A2233;
+      --income:#3FE0C4;
+      --income-soft:#193A34;
+      --warn:#F0C066;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -12px rgba(0,0,0,.6);
+      --shadow-lg: 0 20px 48px -16px rgba(0,0,0,.7);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#100E1C;
+    --frame:#100E1C;
+    --surface:#1C1830;
+    --surface-2:#241F3B;
+    --ink:#F3F0FB;
+    --ink-soft:#B0A8CC;
+    --ink-faint:#756D96;
+    --line:#332C50;
+    --accent:#9B8CFF;
+    --accent-ink:#171331;
+    --accent-soft:#2A2450;
+    --spend:#FF93AC;
+    --spend-soft:#3A2233;
+    --income:#3FE0C4;
+    --income-soft:#193A34;
+    --warn:#F0C066;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -12px rgba(0,0,0,.6);
+    --shadow-lg: 0 20px 48px -16px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--frame);
+    color:var(--ink);
+    font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', system-ui, sans-serif;
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+  }
+  h1,h2,h3,.num{ font-family:'Sora', 'Manrope', system-ui, sans-serif; text-wrap:balance; }
+  button{ font-family:inherit; }
+  .num{ font-variant-numeric: tabular-nums; }
+
+  .app{
+    width:100%;
+    max-width:440px;
+    min-height:100vh;
+    background:var(--bg);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    box-shadow: var(--shadow-lg);
+  }
+  @media (min-width:480px){
+    body{ padding-block:28px; }
+    .app{ min-height:calc(100vh - 56px); border-radius:36px; overflow:hidden; }
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 20px 6px;
+  }
+  .brand{ display:flex; flex-direction:column; gap:1px; }
+  .brand .word{ font-size:22px; font-weight:800; letter-spacing:-0.02em; }
+  .brand .sub{ font-size:12px; color:var(--ink-soft); font-weight:600; }
+  .rate-pill{
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface); border:1px solid var(--line);
+    padding:7px 12px; border-radius:999px; box-shadow:var(--shadow);
+    font-size:12.5px; font-weight:700; color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .rate-pill .dot{ width:6px; height:6px; border-radius:50%; background:var(--income); flex:none; }
+  .rate-pill.stale .dot{ background:var(--warn); }
+  .rate-pill b{ color:var(--ink); font-weight:800; }
+
+  /* ---------- Scroll area ---------- */
+  .screens{ flex:1; overflow:hidden; position:relative; }
+  .screen{
+    position:absolute; inset:0; overflow-y:auto;
+    padding:14px 20px 110px;
+    display:none;
+    animation: fade .22s ease;
+  }
+  .screen.active{ display:block; }
+  @keyframes fade{ from{ opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+  /* ---------- Hero balance card ---------- */
+  .hero{
+    margin-top:10px;
+    border-radius:28px;
+    padding:24px 22px;
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
+      var(--surface);
+    border:1px solid var(--line);
+    box-shadow:var(--shadow);
+  }
+  .hero .label{ font-size:12.5px; font-weight:700; color:var(--ink-soft); }
+  .hero .jpy{ font-size:42px; font-weight:800; letter-spacing:-0.02em; margin:4px 0 2px; line-height:1.05; }
+  .hero .jpy small{ font-size:20px; font-weight:700; color:var(--ink-soft); margin-right:2px; }
+  .hero-row{ display:flex; align-items:center; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:10px; }
+  .fx-chip{
+    display:flex; align-items:center; gap:8px; background:var(--surface-2);
+    border-radius:999px; padding:8px 12px; font-size:14px; font-weight:700; color:var(--ink);
+    cursor:pointer; border:none;
+  }
+  .fx-chip .cur{ font-size:11px; font-weight:800; color:var(--accent); background:var(--accent-soft); padding:2px 7px; border-radius:999px; }
+  .days-pill{ font-size:12px; font-weight:700; color:var(--ink-soft); background:var(--surface-2); padding:7px 11px; border-radius:999px; }
+
+  /* ---------- Stat grid ---------- */
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .stat{
+    background:var(--surface); border:1px solid var(--line); border-radius:20px;
+    padding:14px 15px; box-shadow:var(--shadow);
+  }
+  .stat .t{ font-size:11.5px; font-weight:700; color:var(--ink-soft); display:flex; align-items:center; gap:5px; }
+  .stat .v{ font-size:19px; font-weight:800; margin-top:6px; letter-spacing:-0.01em; }
+  .stat .v.spend{ color:var(--spend); }
+  .stat .v.income{ color:var(--income); }
+  .stat .d{ font-size:11.5px; color:var(--ink-faint); margin-top:2px; font-weight:600; }
+
+  /* ---------- Section header ---------- */
+  .sec-head{ display:flex; align-items:baseline; justify-content:space-between; margin:22px 0 10px; }
+  .sec-head h2{ font-size:15.5px; font-weight:700; margin:0; }
+  .sec-head a{ font-size:12.5px; font-weight:700; color:var(--accent); text-decoration:none; cursor:pointer; }
+
+  /* ---------- Transaction row ---------- */
+  .tx-list{ display:flex; flex-direction:column; gap:8px; }
+  .tx{
+    display:flex; align-items:center; gap:12px;
+    background:var(--surface); border:1px solid var(--line); border-radius:18px;
+    padding:11px 13px; box-shadow:var(--shadow); cursor:pointer;
+  }
+  .tx:active{ transform:scale(.99); }
+  .tx .icon{
+    width:38px; height:38px; border-radius:12px; flex:none;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--surface-2); color:var(--ink-soft);
+  }
+  .tx.is-income .icon{ background:var(--income-soft); color:var(--income); }
+  .tx .body{ flex:1; min-width:0; }
+  .tx .cat{ font-size:14px; font-weight:700; }
+  .tx .meta{ font-size:12px; color:var(--ink-faint); font-weight:600; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tx .amt{ text-align:right; flex:none; }
+  .tx .amt .jpy{ font-size:14.5px; font-weight:800; }
+  .tx.is-income .amt .jpy{ color:var(--income); }
+  .tx.is-expense .amt .jpy{ color:var(--ink); }
+  .tx .amt .eur{ font-size:11.5px; color:var(--ink-faint); font-weight:600; margin-top:1px; }
+  .empty{
+    text-align:center; padding:34px 16px; color:var(--ink-faint); font-size:13.5px; font-weight:600;
+    background:var(--surface); border:1px dashed var(--line); border-radius:18px;
+  }
+
+  /* ---------- History filters ---------- */
+  .chips{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:4px; }
+  .chips::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:none; padding:8px 14px; border-radius:999px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink-soft); font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .chip.active{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .month-head{ font-size:12.5px; font-weight:800; color:var(--ink-soft); margin:18px 2px 8px; display:flex; justify-content:space-between; }
+
+  .month-nav{ display:flex; align-items:center; justify-content:center; gap:8px; margin:16px 0 4px; }
+  .month-nav .month-label{ font-size:16px; font-weight:800; min-width:112px; text-align:center; letter-spacing:-0.01em; }
+  .nav-btn{
+    width:30px; height:30px; border-radius:50%; border:1px solid var(--line); background:var(--surface);
+    color:var(--ink-soft); font-size:14px; font-weight:800; cursor:pointer; flex:none;
+    display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); font-family:'Manrope',sans-serif;
+  }
+  .nav-btn:active{ transform:scale(.9); }
+  .detail-toggle{ margin-top:14px; }
+
+  .mini-toggle{ display:flex; background:var(--surface-2); border-radius:999px; padding:3px; gap:2px; flex:none; }
+  .mini-toggle button{ border:none; background:none; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:800; color:var(--ink-soft); cursor:pointer; }
+  .mini-toggle button.sel{ background:var(--surface); color:var(--accent); box-shadow:var(--shadow); }
+
+  .month-card{ background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:16px 16px 6px; box-shadow:var(--shadow); margin-top:16px; }
+  .month-card .mc-title{ font-size:14px; font-weight:800; margin-bottom:10px; }
+  .mc-totals{ display:flex; gap:10px; margin-bottom:12px; }
+  .mc-total{ flex:1; background:var(--surface-2); border-radius:14px; padding:10px 12px; }
+  .mc-total .l{ font-size:11px; font-weight:700; color:var(--ink-soft); }
+  .mc-total .v{ font-size:15.5px; font-weight:800; margin-top:2px; }
+  .mc-total .v.spend{ color:var(--spend); }
+  .mc-total .v.income{ color:var(--income); }
+  .mc-net{ text-align:center; font-size:12px; font-weight:700; color:var(--ink-soft); margin:-2px 0 12px; }
+  .mc-net b{ color:var(--ink); }
+  .mc-cats{ display:flex; flex-direction:column; gap:9px; padding-bottom:14px; }
+  .mc-cat{ display:flex; align-items:center; gap:9px; }
+  .mc-cat .ic{ width:26px; height:26px; border-radius:8px; background:var(--surface-2); color:var(--ink-soft); display:flex; align-items:center; justify-content:center; flex:none; }
+  .mc-cat .mid{ flex:1; min-width:0; }
+  .mc-cat .lbl{ display:flex; justify-content:space-between; font-size:12.5px; font-weight:700; margin-bottom:4px; }
+  .mc-cat .bar{ height:5px; border-radius:99px; background:var(--surface-2); overflow:hidden; }
+  .mc-cat .bar i{ display:block; height:100%; background:var(--accent); border-radius:99px; }
+  .mc-empty{ font-size:12px; color:var(--ink-faint); font-weight:600; padding-bottom:14px; }
+
+  .created-info{ text-align:center; font-size:11.5px; color:var(--ink-faint); font-weight:600; margin:2px 0 12px; }
+  .link-btn{ background:none; border:none; color:var(--ink-faint); font-size:12.5px; font-weight:700; cursor:pointer; padding:8px; text-align:center; width:100%; }
+  .link-btn.danger{ color:var(--spend); }
+  .confirm-row{ display:none; gap:8px; margin-top:2px; }
+  .confirm-row.show{ display:flex; }
+  .confirm-row button{ flex:1; padding:10px; border-radius:12px; border:none; font-size:13px; font-weight:800; cursor:pointer; }
+  .confirm-row .yes{ background:var(--spend); color:#fff; }
+  .confirm-row .no{ background:var(--surface-2); color:var(--ink); }
+
+  /* ---------- Onboarding / settings form ---------- */
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:18px; box-shadow:var(--shadow); margin-bottom:14px; }
+  .card h3{ font-size:14.5px; margin:0 0 3px; }
+  .card .hint{ font-size:12px; color:var(--ink-faint); font-weight:600; margin:0 0 14px; line-height:1.5; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
+  .field input, .field select{
+    width:100%; padding:12px 13px; border-radius:13px; border:1px solid var(--line);
+    background:var(--surface-2); color:var(--ink); font-size:15px; font-weight:700; font-family:inherit;
+  }
+  .field input:focus, .field select:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btn{
+    width:100%; padding:14px; border-radius:14px; border:none; background:var(--accent); color:var(--accent-ink);
+    font-size:15px; font-weight:800; cursor:pointer; letter-spacing:-0.01em;
+  }
+  .btn:active{ transform:scale(.98); }
+  .btn.ghost{ background:var(--surface-2); color:var(--ink); }
+  .save-msg{ text-align:center; font-size:12.5px; font-weight:700; color:var(--income); height:16px; margin-top:8px; }
+
+  /* ---------- Bottom nav ---------- */
+  .tabbar{
+    position:absolute; left:0; right:0; bottom:0;
+    display:flex; align-items:center; justify-content:space-around;
+    background:color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter:blur(16px);
+    border-top:1px solid var(--line);
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+  .tab{
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    background:none; border:none; color:var(--ink-faint); font-size:10.5px; font-weight:700;
+    padding:4px 14px; cursor:pointer;
+  }
+  .tab.active{ color:var(--accent); }
+  .fab{
+    width:56px; height:56px; border-radius:50%; background:var(--accent); color:var(--accent-ink);
+    border:none; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow:0 10px 24px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+    margin-top:-30px;
+  }
+  .fab:active{ transform:scale(.94); }
+
+  /* ---------- Category grid (sheet) ---------- */
+  .cat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+  .cat-btn{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    background:var(--surface-2); border:1.5px solid transparent; border-radius:16px;
+    padding:11px 4px; cursor:pointer; color:var(--ink-soft);
+  }
+  .cat-btn .ic{ width:30px; height:30px; border-radius:10px; background:var(--surface); display:flex; align-items:center; justify-content:center; }
+  .cat-btn span{ font-size:10.5px; font-weight:700; }
+  .cat-btn.sel{ border-color:var(--accent); color:var(--accent); }
+  .cat-btn.sel .ic{ background:var(--accent-soft); color:var(--accent); }
+
+  .seg{ display:flex; background:var(--surface-2); border-radius:14px; padding:4px; gap:4px; }
+  .seg button{
+    flex:1; border:none; background:none; padding:10px; border-radius:11px; font-size:13.5px; font-weight:800; color:var(--ink-soft); cursor:pointer;
+  }
+  .seg button.sel{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow); }
+  .seg button.sel.expense{ color:var(--spend); }
+  .seg button.sel.income{ color:var(--income); }
+
+  .amt-row{ display:flex; gap:10px; align-items:stretch; }
+  .amt-row input{ flex:1; font-size:26px !important; font-weight:800 !important; }
+  .cur-toggle{
+    display:flex; flex-direction:column; border-radius:13px; overflow:hidden; border:1px solid var(--line); flex:none;
+  }
+  .cur-toggle button{
+    border:none; background:var(--surface-2); color:var(--ink-soft); font-size:13px; font-weight:800; padding:6px 12px; cursor:pointer;
+  }
+  .cur-toggle button.sel{ background:var(--accent); color:var(--accent-ink); }
+
+  /* ---------- Sheet overlay ---------- */
+  .overlay{
+    position:absolute; inset:0; background:rgba(16,13,26,.5); z-index:20;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .overlay.show{ display:flex; }
+  .sheet{
+    width:100%; max-height:88%; overflow-y:auto; background:var(--bg); border-radius:26px 26px 0 0;
+    padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+    box-shadow:var(--shadow-lg);
+    animation:up .26s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes up{ from{ transform:translateY(24px); opacity:.4;} to{ transform:none; opacity:1; } }
+  .sheet-grab{ width:36px; height:4px; background:var(--line); border-radius:99px; margin:6px auto 14px; }
+  .sheet-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .sheet-head h3{ margin:0; font-size:16.5px; }
+  .icon-btn{ background:var(--surface-2); border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); cursor:pointer; }
+
+  .loading{ display:flex; align-items:center; justify-content:center; min-height:70vh; color:var(--ink-faint); font-size:13px; font-weight:700; }
+
+  @media (prefers-reduced-motion:reduce){ *{ animation-duration:.001ms !important; } }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="word">Cambio</div>
+      <div class="sub">おこづかい帳・マドリード</div>
+    </div>
+    <button class="rate-pill" id="ratePill" title="為替レート">
+      <span class="dot"></span>
+      <span>€1 = <b id="rateVal">—</b></span>
+    </button>
+  </div>
+
+  <div class="screens">
+    <!-- HOME -->
+    <section class="screen active" id="screen-home">
+      <div class="hero">
+        <div class="label">現在の残高</div>
+        <div class="jpy num"><small>¥</small><span id="balJpy">—</span></div>
+        <div class="hero-row">
+          <button class="fx-chip" id="fxChip"><span class="cur" id="fxCur">EUR</span><span id="balForeign">—</span></button>
+          <span class="days-pill" id="daysPill">—</span>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="t">今月の支出</div>
+          <div class="v spend num" id="statMonthSpend">—</div>
+          <div class="d" id="statMonthSpendSub">&nbsp;</div>
+        </div>
+        <div class="stat">
+          <div class="t">次回の仕送り予定</div>
+          <div class="v income num" id="statNextIncome">—</div>
+          <div class="d" id="statNextIncomeSub">&nbsp;</div>
+        </div>
+        <div class="stat">
+          <div class="t">予測残高</div>
+          <div class="v num" id="statProjected">—</div>
+          <div class="d">次回仕送り反映後</div>
+        </div>
+        <div class="stat">
+          <div class="t">1日あたりの目安</div>
+          <div class="v num" id="statDaily">—</div>
+          <div class="d" id="statDailySub">&nbsp;</div>
+        </div>
+      </div>
+
+      <div class="sec-head"><h2>最近の記録</h2><a id="toHistory">すべて見る</a></div>
+      <div class="tx-list" id="recentList"></div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="screen" id="screen-history">
+      <div class="sec-head" style="margin-top:6px">
+        <h2>履歴</h2>
+        <div class="mini-toggle" id="histCurToggle">
+          <button type="button" data-cur="JPY" class="sel">円</button>
+          <button type="button" data-cur="EUR">EUR</button>
+        </div>
+      </div>
+
+      <div class="month-nav">
+        <button type="button" class="nav-btn" id="navYearPrev" title="前年の同じ月" aria-label="前年の同じ月">«</button>
+        <button type="button" class="nav-btn" id="navPrev" title="前の月" aria-label="前の月">‹</button>
+        <div class="month-label" id="monthLabel">—</div>
+        <button type="button" class="nav-btn" id="navNext" title="次の月" aria-label="次の月">›</button>
+        <button type="button" class="nav-btn" id="navYearNext" title="翌年の同じ月" aria-label="翌年の同じ月">»</button>
+      </div>
+
+      <div id="monthSummaryCard"></div>
+
+      <button type="button" class="btn ghost detail-toggle" id="detailToggle">詳細を見る</button>
+
+      <div id="monthDetail" style="display:none">
+        <div class="chips" id="catChips"></div>
+        <div id="historyList"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="screen" id="screen-settings">
+      <div class="sec-head" style="margin-top:6px"><h2>設定</h2></div>
+
+      <div class="card">
+        <h3>もちがね（初期資産）</h3>
+        <p class="hint">留学に出発する時点で、すでに手元にある・口座にあるお金の合計です。</p>
+        <div class="field">
+          <label for="inInitial">初期資産（円）</label>
+          <input type="number" id="inInitial" inputmode="numeric" placeholder="例）300000">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>毎月の仕送り・奨学金</h3>
+        <p class="hint">毎月決まって振り込まれる金額を入れておくと、「次回の仕送り予定」と「予測残高」に反映されます。実際に振り込まれたら、＋ボタンから「収入」として記録してください。</p>
+        <div class="two-col">
+          <div class="field">
+            <label for="inMonthly">金額（円/月）</label>
+            <input type="number" id="inMonthly" inputmode="numeric" placeholder="例）100000">
+          </div>
+          <div class="field">
+            <label for="inIncomeDay">振込日（毎月）</label>
+            <input type="number" id="inIncomeDay" inputmode="numeric" min="1" max="28" placeholder="例）25">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>留学期間</h3>
+        <p class="hint">残り日数と、1日あたりの目安金額の計算に使います。</p>
+        <div class="two-col">
+          <div class="field">
+            <label for="inStart">開始日</label>
+            <input type="date" id="inStart">
+          </div>
+          <div class="field">
+            <label for="inEnd">終了日</label>
+            <input type="date" id="inEnd">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>表示通貨</h3>
+        <p class="hint">残高の下に表示するメイン通貨を選べます（履歴ではいつでも切り替えられます）。</p>
+        <div class="field" style="margin-bottom:0">
+          <select id="inDisplayCur">
+            <option value="EUR">ユーロ（EUR）</option>
+            <option value="USD">米ドル（USD）</option>
+            <option value="GBP">英ポンド（GBP）</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn" id="saveSettings">保存する</button>
+      <div class="save-msg" id="saveMsg"></div>
+
+      <div class="card" id="importCard" style="display:none">
+        <h3>9月分の記録を取り込む</h3>
+        <p class="hint">娘さんが入力した9月分（71件）を、一度だけまとめて登録します。取り込みが終わると、このカードは消えます。</p>
+        <button class="btn" id="importBtn">取り込む</button>
+        <div class="save-msg" id="importMsg"></div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3>為替レートについて</h3>
+        <p class="hint" id="rateInfo">為替レートは毎日自動で更新され、記録した時点のレートがそれぞれの記録に保存されます（あとからレートが変わっても、過去の記録の円換算は変わりません）。</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="tabbar">
+    <button class="tab active" data-tab="home" id="tabHome"></button>
+    <button class="tab" data-tab="history" id="tabHistory"></button>
+    <button class="fab" id="fabAdd"></button>
+    <button class="tab" data-tab="settings" id="tabSettings"></button>
+    <span style="width:44px"></span>
+  </div>
+
+  <!-- ADD TRANSACTION SHEET -->
+  <div class="overlay" id="addOverlay">
+    <div class="sheet">
+      <div class="sheet-grab"></div>
+      <div class="sheet-head">
+        <h3 id="sheetTitle">記録を追加</h3>
+        <button class="icon-btn" id="closeSheet">✕</button>
+      </div>
+
+      <div class="seg" style="margin-bottom:16px">
+        <button type="button" class="sel expense" id="segExpense">支出</button>
+        <button type="button" id="segIncome">収入</button>
+      </div>
+
+      <div class="field">
+        <label>金額</label>
+        <div class="amt-row">
+          <input type="number" id="inAmount" inputmode="decimal" placeholder="0" autocomplete="off">
+          <div class="cur-toggle">
+            <button type="button" class="sel" id="curJpy">円</button>
+            <button type="button" id="curEur">€</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" id="catField">
+        <label>カテゴリー</label>
+        <div class="cat-grid" id="catGrid"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="field">
+          <label for="inDate">日付</label>
+          <input type="date" id="inDate">
+        </div>
+        <div class="field">
+          <label for="inMemo">メモ（任意）</label>
+          <input type="text" id="inMemo" placeholder="例）Mercadona">
+        </div>
+      </div>
+
+      <div class="created-info" id="createdInfo" style="display:none"></div>
+
+      <button class="btn" id="saveTx">保存する</button>
+
+      <button type="button" class="link-btn danger" id="deleteTxLink" style="display:none">この記録を削除する</button>
+      <div class="confirm-row" id="deleteConfirm">
+        <button type="button" class="no" id="deleteCancel">キャンセル</button>
+        <button type="button" class="yes" id="deleteYes">削除する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
+  collection, addDoc, query, where, orderBy, limit, onSnapshot, getDocs
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+// Firebase 接続設定（cambio-app）
+const firebaseConfig = {
+  apiKey: "AIzaSyC9T7pzj2FJPm281aWb7xe5jW8YQZqdb44",
+  authDomain: "cambio-app-763d4.firebaseapp.com",
+  projectId: "cambio-app-763d4",
+  storageBucket: "cambio-app-763d4.firebasestorage.app",
+  messagingSenderId: "976543635057",
+  appId: "1:976543635057:web:52da296af221c4ef9f2dd0"
+};
+
+(function(){
+
+  // ---------------- Icons ----------------
+  const ICON = {
+    home:  '<path d="M4 11.5 12 4l8 7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10.2V19a1 1 0 0 0 1 1h3v-5.2h4V20h3a1 1 0 0 0 1-1v-8.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    list:  '<line x1="5" y1="7" x2="19" y2="7" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-linecap="round"/><line x1="5" y1="17" x2="13" y2="17" stroke-linecap="round"/>',
+    gear:  '<line x1="4" y1="7" x2="20" y2="7" stroke-linecap="round"/><circle cx="14" cy="7" r="2.1"/><line x1="4" y1="17" x2="20" y2="17" stroke-linecap="round"/><circle cx="10" cy="17" r="2.1"/>',
+    plus:  '<line x1="12" y1="5" x2="12" y2="19" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-linecap="round"/>',
+    food:  '<path d="M8 3v6a2 2 0 0 0 4 0V3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="9" x2="10" y2="21" stroke-linecap="round"/><path d="M16 3c-1.4 0-2.3 2-2.3 4.5S14.6 12 16 12v9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    transport: '<rect x="5" y="4.5" width="14" height="10.5" rx="3" fill="none"/><line x1="5" y1="9.5" x2="19" y2="9.5" stroke-linecap="round"/><circle cx="8.7" cy="18.2" r="1.3"/><circle cx="15.3" cy="18.2" r="1.3"/><line x1="8.7" y1="15" x2="8.7" y2="16.9" stroke-linecap="round"/><line x1="15.3" y1="15" x2="15.3" y2="16.9" stroke-linecap="round"/>',
+    daily: '<path d="M6.2 8h11.6l-1 12.2a1.4 1.4 0 0 1-1.4 1.3H8.6a1.4 1.4 0 0 1-1.4-1.3L6.2 8Z" fill="none" stroke-linejoin="round"/><path d="M9 8V6.3a3 3 0 0 1 6 0V8" fill="none" stroke-linecap="round"/>',
+    fun:   '<path d="M4 8.3A1.8 1.8 0 0 1 5.8 6.5h12.4A1.8 1.8 0 0 1 20 8.3v2A1.7 1.7 0 0 0 20 13.7v2a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 15.7v-2a1.7 1.7 0 0 0 0-3.4Z" fill="none" stroke-linejoin="round"/><line x1="13.6" y1="6.9" x2="13.6" y2="17.1" stroke-linecap="round" stroke-dasharray="1.6 2.2"/>',
+    travel:'<path d="M21 3.5 3.3 10.8l6.3 2.4M21 3.5l-3.4 12.6-4.1-6.2M21 3.5 9.6 13.2m0 0 .4 4.6 2.3-2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    study: '<path d="M4 5.8A2.3 2.3 0 0 1 6.3 3.5H12v17H6.3A2.3 2.3 0 0 1 4 18.2Z" fill="none" stroke-linejoin="round"/><path d="M20 5.8a2.3 2.3 0 0 0-2.3-2.3H12v17h5.7A2.3 2.3 0 0 0 20 18.2Z" fill="none" stroke-linejoin="round"/>',
+    housing:'<circle cx="8.3" cy="14.3" r="3.3" fill="none"/><line x1="10.6" y1="12" x2="19.5" y2="3.1" stroke-linecap="round"/><line x1="15.3" y1="7.3" x2="17.7" y2="4.9" stroke-linecap="round"/><line x1="17.1" y1="9.1" x2="19.5" y2="6.7" stroke-linecap="round"/>',
+    clothing:'<path d="M8 4 3.5 7l2 3.5L8 9.5V20h8V9.5l2.5 1 2-3.5L16 4c-.6 1.3-2 2-4 2s-3.4-.7-4-2Z" fill="none" stroke-linejoin="round"/>',
+    utilities:'<path d="M12 3.5c3 3.8 5.5 6.6 5.5 10a5.5 5.5 0 0 1-11 0c0-3.4 2.5-6.2 5.5-10Z" fill="none" stroke-linejoin="round"/>',
+    telecom:'<rect x="7" y="3" width="10" height="18" rx="2.6" fill="none"/><line x1="10.5" y1="18" x2="13.5" y2="18" stroke-linecap="round"/>',
+    health:'<rect x="4" y="4" width="16" height="16" rx="4.5" fill="none"/><line x1="12" y1="8.5" x2="12" y2="15.5" stroke-linecap="round"/><line x1="8.5" y1="12" x2="15.5" y2="12" stroke-linecap="round"/>',
+    other: '<circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/>',
+    income:'<rect x="3.2" y="7" width="17.6" height="12" rx="2.6" fill="none"/><path d="M3.2 10.3h17.6" stroke-linecap="round"/><circle cx="16.2" cy="14.6" r="1.35"/>'
+  };
+  function svg(name, size){ size=size||18; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+ICON[name]+'</svg>'; }
+
+  const CATS = [
+    {id:'food', label:'食費', icon:'food'},
+    {id:'transport', label:'交通', icon:'transport'},
+    {id:'daily', label:'日用品', icon:'daily'},
+    {id:'fun', label:'娯楽・交際', icon:'fun'},
+    {id:'travel', label:'旅行', icon:'travel'},
+    {id:'clothing', label:'服飾', icon:'clothing'},
+    {id:'study', label:'学用品', icon:'study'},
+    {id:'housing', label:'家賃', icon:'housing'},
+    {id:'utilities', label:'水道・光熱', icon:'utilities'},
+    {id:'telecom', label:'通信', icon:'telecom'},
+    {id:'health', label:'医療・ヘルス', icon:'health'},
+    {id:'other', label:'その他', icon:'other'},
+  ];
+  const CAT_MAP = Object.fromEntries(CATS.map(c=>[c.id,c]));
+  CAT_MAP.income = {id:'income', label:'仕送り・収入', icon:'income'};
+
+  document.getElementById('tabHome').innerHTML = svg('home',20);
+  document.getElementById('tabHistory').innerHTML = svg('list',20);
+  document.getElementById('tabSettings').innerHTML = svg('gear',20);
+  document.getElementById('fabAdd').innerHTML = svg('plus',24);
+  document.getElementById('closeSheet').innerHTML = '✕';
+
+  // ---------------- Formatting ----------------
+  const jpyFmt = new Intl.NumberFormat('ja-JP');
+  function fmtJpy(n){ return jpyFmt.format(Math.round(n||0)); }
+  function fmtForeign(n, cur){
+    const d = cur==='JPY' ? 0 : 2;
+    return new Intl.NumberFormat('ja-JP',{minimumFractionDigits:d, maximumFractionDigits:d}).format(n||0);
+  }
+  const SYM = {EUR:'€', USD:'$', GBP:'£'};
+  function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+  function monthKey(dateStr){ return (dateStr||'').slice(0,7); }
+
+  // ---------------- Demo mode (design preview only) ----------------
+  const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+
+  // ---------------- State ----------------
+  let db = null;
+  let settings = null;      // {initialBalanceJpy, monthlyIncomeJpy, incomeDay, studyStart, studyEnd, displayCurrency}
+  let rates = null;         // {EUR, USD, GBP, updatedAt}
+  let txs = [];             // array of {id, type, category, amountJpy, amountEur, currency, rateUsed, date, memo, createdAt}
+  let fxCycle = ['EUR','USD','GBP'];
+  let fxIndex = 0;
+  let historyFilter = 'all';
+  let historyCurrency = 'JPY';
+  let currentMonthKey = todayStr().slice(0,7);
+  let detailOpen = false;
+  let txType = 'expense';
+  let txCurrency = 'JPY';
+  let txCategory = 'food';
+  let editingId = null;
+
+  function seedDemo(){
+    settings = {initialBalanceJpy:300000, monthlyIncomeJpy:100000, incomeDay:25, studyStart:'2026-09-01', studyEnd:'2027-07-31', displayCurrency:'EUR'};
+    rates = {EUR:172.4, USD:148.6, GBP:198.9, updatedAt:new Date().toISOString()};
+    const today = new Date();
+    function d(off){ const x=new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); }
+    function dt(off){ const x=new Date(today); x.setDate(x.getDate()-off); x.setHours(9+off%6, 15, 0, 0); return x.toISOString(); }
+    txs = [
+      {id:'1', type:'expense', category:'food', amountJpy:2380, amountEur:13.8, currency:'EUR', rateUsed:172.4, date:d(0), memo:'Mercado San Miguel', createdAt:dt(0)},
+      {id:'2', type:'expense', category:'transport', amountJpy:1210, amountEur:7, currency:'EUR', rateUsed:172.4, date:d(0), memo:'Metro 10回券', createdAt:dt(0)},
+      {id:'3', type:'expense', category:'daily', amountJpy:3460, amountEur:20, currency:'EUR', rateUsed:172.4, date:d(2), memo:'Mercadona', createdAt:dt(2)},
+      {id:'4', type:'income', category:'income', amountJpy:100000, amountEur:579.3, currency:'JPY', rateUsed:172.4, date:d(3), memo:'9月分仕送り', createdAt:dt(3)},
+      {id:'5', type:'expense', category:'fun', amountJpy:5180, amountEur:30, currency:'EUR', rateUsed:172.4, date:d(5), memo:'フラメンコ観劇', createdAt:dt(5)},
+      {id:'6', type:'expense', category:'study', amountJpy:2590, amountEur:15, currency:'EUR', rateUsed:172.4, date:d(9), memo:'教科書', createdAt:dt(9)},
+      {id:'7', type:'expense', category:'food', amountJpy:1840, amountEur:10.7, currency:'EUR', rateUsed:172, date:d(38), memo:'先月のタパス', createdAt:dt(38)},
+    ];
+  }
+
+  // ---------------- DB wiring (Firestore, wrapped to look like Claude's db capability) ----------------
+  function wrapSnap(snap){
+    return { id: snap.id, exists: (typeof snap.exists==='function') ? snap.exists() : !!snap.exists, data: function(){ return snap.data(); } };
+  }
+  function makeDbShim(fsDb){
+    function wrapDoc(path){
+      const ref = doc(fsDb, path);
+      return {
+        id: ref.id, path: path,
+        get: function(){ return getDoc(ref).then(wrapSnap); },
+        set: function(data){ return setDoc(ref, data); },
+        update: function(data){ return updateDoc(ref, data); },
+        delete: function(){ return deleteDoc(ref); },
+        onSnapshot: function(next, error){ return onSnapshot(ref, function(s){ next(wrapSnap(s)); }, error); },
+        collection: function(sub){ return wrapCollection(path+'/'+sub); }
+      };
+    }
+    function wrapCollection(path){
+      const collRef = collection(fsDb, path);
+      let constraints = [];
+      const api = {
+        path: path,
+        doc: function(id){ const newId = id || doc(collRef).id; return wrapDoc(path+'/'+newId); },
+        add: function(data){ return addDoc(collRef, data).then(function(ref){ return wrapDoc(path+'/'+ref.id); }); },
+        where: function(f,op,v){ constraints.push(where(f,op,v)); return api; },
+        orderBy: function(f,dir){ constraints.push(orderBy(f, dir||'asc')); return api; },
+        limit: function(n){ constraints.push(limit(n)); return api; },
+        get: function(){ const q = query.apply(null, [collRef].concat(constraints)); return getDocs(q).then(function(snap){ return { docs: snap.docs.map(wrapSnap) }; }); },
+        onSnapshot: function(next, error){ const q = query.apply(null, [collRef].concat(constraints)); return onSnapshot(q, function(snap){ next({ docs: snap.docs.map(wrapSnap) }); }, error); }
+      };
+      return api;
+    }
+    return { doc: wrapDoc, collection: wrapCollection };
+  }
+
+  // 9月分の取り込みデータ（一度だけ取り込み。固定IDなので二重登録されません）
+  const IMPORT_SEP = [{"id":"imp202609_01","type":"expense","category":"transport","amountJpy":10990,"amountEur":59.18,"currency":"EUR","rateUsed":185.7,"date":"2026-09-01","memo":"家から空港から寮までのタクシー代"},{"id":"imp202609_02","type":"expense","category":"daily","amountJpy":8717,"amountEur":47.39,"currency":"EUR","rateUsed":183.95,"date":"2026-09-02","memo":"Mercadona22.55 Farmacia24.84"},{"id":"imp202609_03","type":"expense","category":"transport","amountJpy":625,"amountEur":3.4,"currency":"EUR","rateUsed":183.95,"date":"2026-09-02","memo":"Mercadona22.55 Farmacia24.84"},{"id":"imp202609_04","type":"expense","category":"food","amountJpy":201,"amountEur":1.11,"currency":"EUR","rateUsed":181.5,"date":"2026-09-04","memo":"食費：学食とBar"},{"id":"imp202609_05","type":"expense","category":"food","amountJpy":1588,"amountEur":8.75,"currency":"EUR","rateUsed":181.5,"date":"2026-09-04","memo":"食費：学食とBar"},{"id":"imp202609_06","type":"expense","category":"transport","amountJpy":336,"amountEur":1.85,"currency":"EUR","rateUsed":181.5,"date":"2026-09-04","memo":"食費：学食とBar"},{"id":"imp202609_07","type":"expense","category":"food","amountJpy":5429,"amountEur":29.91,"currency":"EUR","rateUsed":181.5,"date":"2026-09-05","memo":"その他：Esim代 AiraloのEsim代は別途4.75ユーロ"},{"id":"imp202609_08","type":"expense","category":"food","amountJpy":2759,"amountEur":15.2,"currency":"EUR","rateUsed":181.5,"date":"2026-09-05","memo":"その他：Esim代 AiraloのEsim代は別途4.75ユーロ"},{"id":"imp202609_09","type":"expense","category":"transport","amountJpy":1298,"amountEur":7.15,"currency":"EUR","rateUsed":181.5,"date":"2026-09-05","memo":"その他：Esim代 AiraloのEsim代は別途4.75ユーロ"},{"id":"imp202609_10","type":"expense","category":"other","amountJpy":1909,"amountEur":10.52,"currency":"EUR","rateUsed":181.5,"date":"2026-09-05","memo":"その他：Esim代 AiraloのEsim代は別途4.75ユーロ"},{"id":"imp202609_11","type":"expense","category":"daily","amountJpy":9425,"amountEur":51.93,"currency":"EUR","rateUsed":181.5,"date":"2026-09-06","memo":"日用品：IKEA 服飾費：ランシュー 交通費19.78分ユーロ不明"},{"id":"imp202609_12","type":"expense","category":"transport","amountJpy":4171,"amountEur":22.98,"currency":"EUR","rateUsed":181.5,"date":"2026-09-06","memo":"日用品：IKEA 服飾費：ランシュー 交通費19.78分ユーロ不明"},{"id":"imp202609_13","type":"expense","category":"clothing","amountJpy":9182,"amountEur":50.59,"currency":"EUR","rateUsed":181.5,"date":"2026-09-06","memo":"日用品：IKEA 服飾費：ランシュー 交通費19.78分ユーロ不明"},{"id":"imp202609_14","type":"expense","category":"food","amountJpy":269,"amountEur":1.5,"currency":"EUR","rateUsed":179.24,"date":"2026-09-07","memo":""},{"id":"imp202609_15","type":"expense","category":"food","amountJpy":1210,"amountEur":6.75,"currency":"EUR","rateUsed":179.24,"date":"2026-09-07","memo":""},{"id":"imp202609_16","type":"expense","category":"transport","amountJpy":233,"amountEur":1.3,"currency":"EUR","rateUsed":179.24,"date":"2026-09-07","memo":""},{"id":"imp202609_17","type":"expense","category":"food","amountJpy":6393,"amountEur":35.78,"currency":"EUR","rateUsed":178.67,"date":"2026-09-08","memo":"交通費：11.54分不明"},{"id":"imp202609_18","type":"expense","category":"transport","amountJpy":3187,"amountEur":17.84,"currency":"EUR","rateUsed":178.67,"date":"2026-09-08","memo":"交通費：11.54分不明"},{"id":"imp202609_19","type":"expense","category":"food","amountJpy":2348,"amountEur":13.15,"currency":"EUR","rateUsed":178.52,"date":"2026-09-09","memo":"外食費：学食とBar"},{"id":"imp202609_20","type":"expense","category":"transport","amountJpy":589,"amountEur":3.3,"currency":"EUR","rateUsed":178.52,"date":"2026-09-09","memo":"外食費：学食とBar"},{"id":"imp202609_21","type":"expense","category":"food","amountJpy":1488,"amountEur":8.3,"currency":"EUR","rateUsed":179.29,"date":"2026-09-10","memo":""},{"id":"imp202609_22","type":"expense","category":"transport","amountJpy":549,"amountEur":3.06,"currency":"EUR","rateUsed":179.29,"date":"2026-09-10","memo":""},{"id":"imp202609_23","type":"expense","category":"transport","amountJpy":406,"amountEur":2.28,"currency":"EUR","rateUsed":178.2,"date":"2026-09-11","memo":""},{"id":"imp202609_24","type":"expense","category":"food","amountJpy":656,"amountEur":3.68,"currency":"EUR","rateUsed":178.2,"date":"2026-09-12","memo":""},{"id":"imp202609_25","type":"expense","category":"food","amountJpy":1105,"amountEur":6.2,"currency":"EUR","rateUsed":178.2,"date":"2026-09-12","memo":""},{"id":"imp202609_26","type":"expense","category":"transport","amountJpy":203,"amountEur":1.14,"currency":"EUR","rateUsed":178.2,"date":"2026-09-12","memo":""},{"id":"imp202609_27","type":"expense","category":"food","amountJpy":5943,"amountEur":33.35,"currency":"EUR","rateUsed":178.2,"date":"2026-09-13","memo":"In Segovia 交際費：お城ツアー 交通費: 高速電車＋電車"},{"id":"imp202609_28","type":"expense","category":"transport","amountJpy":342,"amountEur":1.92,"currency":"EUR","rateUsed":178.2,"date":"2026-09-13","memo":"In Segovia 交際費：お城ツアー 交通費: 高速電車＋電車"},{"id":"imp202609_29","type":"expense","category":"fun","amountJpy":1871,"amountEur":10.5,"currency":"EUR","rateUsed":178.2,"date":"2026-09-13","memo":"In Segovia 交際費：お城ツアー 交通費: 高速電車＋電車"},{"id":"imp202609_30","type":"expense","category":"travel","amountJpy":6460,"amountEur":36.25,"currency":"EUR","rateUsed":178.2,"date":"2026-09-13","memo":"In Segovia 交際費：お城ツアー 交通費: 高速電車＋電車"},{"id":"imp202609_31","type":"expense","category":"clothing","amountJpy":2366,"amountEur":13.28,"currency":"EUR","rateUsed":178.2,"date":"2026-09-13","memo":"In Segovia 交際費：お城ツアー 交通費: 高速電車＋電車"},{"id":"imp202609_32","type":"expense","category":"transport","amountJpy":1093,"amountEur":6.13,"currency":"EUR","rateUsed":178.29,"date":"2026-09-14","memo":"その他：誕プレ手数料で支払い料金多い(3ユーロ分)"},{"id":"imp202609_33","type":"expense","category":"other","amountJpy":2139,"amountEur":12.0,"currency":"EUR","rateUsed":178.29,"date":"2026-09-14","memo":"その他：誕プレ手数料で支払い料金多い(3ユーロ分)"},{"id":"imp202609_34","type":"expense","category":"food","amountJpy":6401,"amountEur":35.76,"currency":"EUR","rateUsed":179.0,"date":"2026-09-15","memo":""},{"id":"imp202609_35","type":"expense","category":"food","amountJpy":277,"amountEur":1.55,"currency":"EUR","rateUsed":179.0,"date":"2026-09-15","memo":""},{"id":"imp202609_36","type":"expense","category":"transport","amountJpy":268,"amountEur":1.5,"currency":"EUR","rateUsed":179.0,"date":"2026-09-15","memo":""},{"id":"imp202609_37","type":"expense","category":"food","amountJpy":1209,"amountEur":6.75,"currency":"EUR","rateUsed":179.16,"date":"2026-09-16","memo":"Valencia チケット代 手数料込"},{"id":"imp202609_38","type":"expense","category":"travel","amountJpy":14781,"amountEur":82.5,"currency":"EUR","rateUsed":179.16,"date":"2026-09-16","memo":"Valencia チケット代 手数料込"},{"id":"imp202609_39","type":"expense","category":"food","amountJpy":609,"amountEur":3.4,"currency":"EUR","rateUsed":179.04,"date":"2026-09-17","memo":""},{"id":"imp202609_40","type":"expense","category":"transport","amountJpy":408,"amountEur":2.28,"currency":"EUR","rateUsed":179.04,"date":"2026-09-17","memo":""},{"id":"imp202609_41","type":"expense","category":"food","amountJpy":7840,"amountEur":43.5,"currency":"EUR","rateUsed":180.23,"date":"2026-09-18","memo":"外食費：38ユーロ分は3人分 その他は振込手数料"},{"id":"imp202609_42","type":"expense","category":"daily","amountJpy":541,"amountEur":3.0,"currency":"EUR","rateUsed":180.23,"date":"2026-09-18","memo":"外食費：38ユーロ分は3人分 その他は振込手数料"},{"id":"imp202609_43","type":"expense","category":"transport","amountJpy":186,"amountEur":1.03,"currency":"EUR","rateUsed":180.23,"date":"2026-09-18","memo":"外食費：38ユーロ分は3人分 その他は振込手数料"},{"id":"imp202609_44","type":"expense","category":"fun","amountJpy":2056,"amountEur":11.41,"currency":"EUR","rateUsed":180.23,"date":"2026-09-18","memo":"外食費：38ユーロ分は3人分 その他は振込手数料"},{"id":"imp202609_45","type":"expense","category":"other","amountJpy":155,"amountEur":0.86,"currency":"EUR","rateUsed":180.23,"date":"2026-09-18","memo":"外食費：38ユーロ分は3人分 その他は振込手数料"},{"id":"imp202609_46","type":"expense","category":"food","amountJpy":624,"amountEur":3.46,"currency":"EUR","rateUsed":180.23,"date":"2026-09-19","memo":""},{"id":"imp202609_47","type":"expense","category":"transport","amountJpy":398,"amountEur":2.21,"currency":"EUR","rateUsed":180.23,"date":"2026-09-19","memo":""},{"id":"imp202609_48","type":"expense","category":"food","amountJpy":1703,"amountEur":9.45,"currency":"EUR","rateUsed":180.23,"date":"2026-09-20","memo":""},{"id":"imp202609_49","type":"expense","category":"transport","amountJpy":1422,"amountEur":7.88,"currency":"EUR","rateUsed":180.42,"date":"2026-09-21","memo":""},{"id":"imp202609_50","type":"expense","category":"food","amountJpy":667,"amountEur":3.7,"currency":"EUR","rateUsed":180.25,"date":"2026-09-22","memo":"学食"},{"id":"imp202609_51","type":"expense","category":"transport","amountJpy":1857,"amountEur":10.3,"currency":"EUR","rateUsed":180.25,"date":"2026-09-22","memo":"学食"},{"id":"imp202609_52","type":"expense","category":"food","amountJpy":6057,"amountEur":33.61,"currency":"EUR","rateUsed":180.2,"date":"2026-09-23","memo":"その他：振込手数料"},{"id":"imp202609_53","type":"expense","category":"transport","amountJpy":1130,"amountEur":6.27,"currency":"EUR","rateUsed":180.2,"date":"2026-09-23","memo":"その他：振込手数料"},{"id":"imp202609_54","type":"expense","category":"other","amountJpy":222,"amountEur":1.23,"currency":"EUR","rateUsed":180.2,"date":"2026-09-23","memo":"その他：振込手数料"},{"id":"imp202609_55","type":"expense","category":"transport","amountJpy":2488,"amountEur":13.77,"currency":"EUR","rateUsed":180.67,"date":"2026-09-24","memo":""},{"id":"imp202609_56","type":"expense","category":"food","amountJpy":170,"amountEur":0.95,"currency":"EUR","rateUsed":179.18,"date":"2026-09-25","memo":"交通費：Abono Jovenカード代とチャージ代14ユーロ"},{"id":"imp202609_57","type":"expense","category":"food","amountJpy":1201,"amountEur":6.7,"currency":"EUR","rateUsed":179.18,"date":"2026-09-25","memo":"交通費：Abono Jovenカード代とチャージ代14ユーロ"},{"id":"imp202609_58","type":"expense","category":"daily","amountJpy":1075,"amountEur":6.0,"currency":"EUR","rateUsed":179.18,"date":"2026-09-25","memo":"交通費：Abono Jovenカード代とチャージ代14ユーロ"},{"id":"imp202609_59","type":"expense","category":"transport","amountJpy":2996,"amountEur":16.72,"currency":"EUR","rateUsed":179.18,"date":"2026-09-25","memo":"交通費：Abono Jovenカード代とチャージ代14ユーロ"},{"id":"imp202609_60","type":"expense","category":"clothing","amountJpy":7183,"amountEur":40.09,"currency":"EUR","rateUsed":179.18,"date":"2026-09-25","memo":"交通費：Abono Jovenカード代とチャージ代14ユーロ"},{"id":"imp202609_61","type":"expense","category":"food","amountJpy":667,"amountEur":3.72,"currency":"EUR","rateUsed":179.18,"date":"2026-09-26","memo":"旅費：ポルトガル航空券"},{"id":"imp202609_62","type":"expense","category":"food","amountJpy":4901,"amountEur":27.35,"currency":"EUR","rateUsed":179.18,"date":"2026-09-26","memo":"旅費：ポルトガル航空券"},{"id":"imp202609_63","type":"expense","category":"transport","amountJpy":2272,"amountEur":12.68,"currency":"EUR","rateUsed":179.18,"date":"2026-09-26","memo":"旅費：ポルトガル航空券"},{"id":"imp202609_64","type":"expense","category":"travel","amountJpy":19692,"amountEur":109.9,"currency":"EUR","rateUsed":179.18,"date":"2026-09-26","memo":"旅費：ポルトガル航空券"},{"id":"imp202609_65","type":"expense","category":"food","amountJpy":672,"amountEur":3.75,"currency":"EUR","rateUsed":179.18,"date":"2026-09-27","memo":""},{"id":"imp202609_66","type":"expense","category":"transport","amountJpy":1758,"amountEur":9.81,"currency":"EUR","rateUsed":179.18,"date":"2026-09-27","memo":""},{"id":"imp202609_67","type":"expense","category":"food","amountJpy":743,"amountEur":4.15,"currency":"EUR","rateUsed":178.98,"date":"2026-09-28","memo":"８月分のクレカ請求"},{"id":"imp202609_68","type":"expense","category":"other","amountJpy":23949,"amountEur":133.81,"currency":"EUR","rateUsed":178.98,"date":"2026-09-28","memo":"８月分のクレカ請求"},{"id":"imp202609_69","type":"expense","category":"food","amountJpy":6341,"amountEur":35.54,"currency":"EUR","rateUsed":178.42,"date":"2026-09-29","memo":""},{"id":"imp202609_70","type":"expense","category":"food","amountJpy":2515,"amountEur":14.1,"currency":"EUR","rateUsed":178.4,"date":"2026-09-30","memo":""},{"id":"imp202609_71","type":"expense","category":"clothing","amountJpy":4635,"amountEur":25.98,"currency":"EUR","rateUsed":178.4,"date":"2026-09-30","memo":""}];
+  let importDone = false;
+
+  async function init(){
+    if (DEMO){ seedDemo(); render(); return; }
+    try{
+      if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('YOUR_')===0) throw new Error('firebaseConfig is still the placeholder — paste your real Firebase settings in.');
+      const app = initializeApp(firebaseConfig);
+      await signInAnonymously(getAuth(app));
+      db = makeDbShim(getFirestore(app));
+    }catch(e){
+      db = null;
+      console.error('Cambio: Firebase 接続に失敗しました。', e);
+    }
+
+    if (!db){
+      document.getElementById('screen-home').innerHTML = '<div class="loading">データベースに接続できませんでした。<br>ファイル内の firebaseConfig が正しく貼り付けられているか確認してください。<br>（詳しいエラーはブラウザのコンソールに出ています）</div>';
+      return;
+    }
+
+    db.doc('settings/main').onSnapshot(function(snap){
+      settings = snap.exists ? snap.data() : null;
+      render();
+    }, function(){});
+
+    db.doc('meta/import202609').onSnapshot(function(snap){
+      importDone = snap.exists;
+      renderImportCard();
+    }, function(){});
+
+    db.doc('rates/latest').onSnapshot(function(snap){
+      rates = snap.exists ? snap.data() : null;
+      render();
+    }, function(){});
+
+    db.collection('transactions').orderBy('date','desc').limit(500).onSnapshot(function(qs){
+      txs = qs.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; });
+      render();
+    }, function(){});
+  }
+
+  function defaultRates(){ return {EUR:170, USD:145, GBP:195, updatedAt:null}; }
+
+  // ---------------- Computation ----------------
+  function compute(){
+    const r = rates || defaultRates();
+    const st = settings || {initialBalanceJpy:0, monthlyIncomeJpy:0, incomeDay:25, studyStart:null, studyEnd:null, displayCurrency:'EUR'};
+    let totalIncome=0, totalExpense=0;
+    txs.forEach(function(t){
+      if (t.type==='income') totalIncome += (t.amountJpy||0);
+      else totalExpense += (t.amountJpy||0);
+    });
+    const currentBalance = (st.initialBalanceJpy||0) + totalIncome - totalExpense;
+
+    const today = new Date();
+    const tKey = today.toISOString().slice(0,7);
+    let monthSpend=0, monthIncome=0;
+    txs.forEach(function(t){
+      if (monthKey(t.date)===tKey){
+        if (t.type==='expense') monthSpend += (t.amountJpy||0);
+        else monthIncome += (t.amountJpy||0);
+      }
+    });
+    const receivedThisMonth = monthIncome > 0;
+
+    let nextDate = new Date(today.getFullYear(), today.getMonth(), st.incomeDay||25);
+    if (receivedThisMonth || nextDate < today) nextDate = new Date(today.getFullYear(), today.getMonth()+1, st.incomeDay||25);
+    const projectedBalance = currentBalance + (receivedThisMonth ? 0 : (st.monthlyIncomeJpy||0));
+
+    let daysLeft = null;
+    if (st.studyEnd){
+      const end = new Date(st.studyEnd+'T00:00:00');
+      daysLeft = Math.ceil((end - today) / 86400000);
+    }
+    const dailyBudget = (daysLeft && daysLeft>0) ? projectedBalance/daysLeft : null;
+
+    return {r, st, currentBalance, monthSpend, monthIncome, nextDate, monthlyIncome: st.monthlyIncomeJpy||0, projectedBalance, daysLeft, dailyBudget, receivedThisMonth};
+  }
+
+  function toForeign(jpy, cur, r){ if(!r || !r[cur]) return null; return jpy / r[cur]; }
+
+  // ---------------- Render ----------------
+  function render(){
+    const c = compute();
+    const r = c.r;
+
+    // rate pill
+    const curShown = fxCycle[fxIndex];
+    document.getElementById('rateVal').textContent = r[curShown] ? ('¥'+fmtJpy(r[curShown])) : '—';
+    const pill = document.getElementById('ratePill');
+    const stale = !r.updatedAt || (Date.now() - new Date(r.updatedAt).getTime()) > 1000*60*60*30;
+    pill.classList.toggle('stale', !!stale);
+
+    // hero
+    document.getElementById('balJpy').textContent = fmtJpy(c.currentBalance);
+    document.getElementById('fxCur').textContent = curShown;
+    const fVal = toForeign(c.currentBalance, curShown, r);
+    document.getElementById('balForeign').textContent = fVal==null ? '—' : (SYM[curShown]+fmtForeign(fVal, curShown));
+    document.getElementById('daysPill').textContent = (c.daysLeft==null) ? '留学期間を設定' : (c.daysLeft>=0 ? ('留学まであと '+c.daysLeft+'日') : '留学終了');
+
+    // stats
+    document.getElementById('statMonthSpend').textContent = '¥'+fmtJpy(c.monthSpend);
+    const monthForeign = toForeign(c.monthSpend, c.st.displayCurrency||'EUR', r);
+    document.getElementById('statMonthSpendSub').textContent = monthForeign==null ? '' : ('≈ '+SYM[c.st.displayCurrency||'EUR']+fmtForeign(monthForeign, c.st.displayCurrency||'EUR'));
+
+    document.getElementById('statNextIncome').textContent = c.monthlyIncome ? ('¥'+fmtJpy(c.monthlyIncome)) : '未設定';
+    document.getElementById('statNextIncomeSub').textContent = c.monthlyIncome ? (c.nextDate.getMonth()+1)+'月'+c.nextDate.getDate()+'日 予定' : '設定タブで入力';
+
+    document.getElementById('statProjected').textContent = '¥'+fmtJpy(c.projectedBalance);
+    document.getElementById('statDaily').textContent = c.dailyBudget==null ? '—' : ('¥'+fmtJpy(c.dailyBudget));
+    document.getElementById('statDailySub').textContent = c.dailyBudget==null ? '留学期間を設定すると表示' : '残り日数から算出';
+
+    // recent list (home)
+    renderTxList(document.getElementById('recentList'), txs.slice(0,6), r, c.st.displayCurrency||'EUR');
+
+    // history
+    renderHistory(r, c.st.displayCurrency||'EUR');
+
+    // settings form (only fill if not focused, avoid clobbering typing)
+    if (document.activeElement && document.activeElement.closest('#screen-settings')){ /* skip */ }
+    else fillSettingsForm(c.st);
+
+    document.getElementById('rateInfo').textContent = '為替レートは毎日自動で更新され、記録した時点のレートがそれぞれの記録に保存されます（あとからレートが変わっても、過去の記録の円換算は変わりません）。'+
+      (r.updatedAt ? ('最終更新：'+new Date(r.updatedAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})) : '');
+  }
+
+  function txRow(t, r, dispCur, forceCur){
+    const cat = CAT_MAP[t.category] || CAT_MAP.other;
+    const isIncome = t.type==='income';
+    const d = new Date((t.date||'')+'T00:00:00');
+    const dateLabel = isNaN(d) ? '' : (d.getMonth()+1)+'/'+d.getDate();
+    let mainLine, subLine;
+    if (forceCur==='EUR'){
+      mainLine = (isIncome?'+':'-')+'€'+fmtForeign(t.amountEur,'EUR');
+      subLine = '¥'+fmtJpy(t.amountJpy);
+    } else {
+      // EUR has a value stored on the record itself (accurate at entry time); other
+      // currencies aren't stored per-transaction, so those fall back to today's rate.
+      const foreign = dispCur==='EUR' ? t.amountEur : toForeign(t.amountJpy, dispCur, r);
+      mainLine = (isIncome?'+':'-')+'¥'+fmtJpy(t.amountJpy);
+      subLine = (foreign==null) ? '' : (SYM[dispCur]+fmtForeign(foreign,dispCur));
+    }
+    return '<div class="tx '+(isIncome?'is-income':'is-expense')+'" data-id="'+t.id+'">'+
+      '<div class="icon">'+svg(cat.icon,18)+'</div>'+
+      '<div class="body"><div class="cat">'+cat.label+'</div><div class="meta">'+dateLabel+(t.memo? ' ・ '+escapeHtml(t.memo):'')+'</div></div>'+
+      '<div class="amt"><div class="jpy num">'+mainLine+'</div>'+
+      '<div class="eur num">'+subLine+'</div></div>'+
+    '</div>';
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  function renderTxList(el, list, r, dispCur){
+    if (!list.length){ el.innerHTML = '<div class="empty">まだ記録がありません。右下の＋から追加しましょう。</div>'; return; }
+    el.innerHTML = list.map(function(t){ return txRow(t, r, dispCur); }).join('');
+  }
+
+  function fmtByCur(jpy, eur, cur){ return cur==='EUR' ? ('€'+fmtForeign(eur,'EUR')) : ('¥'+fmtJpy(jpy)); }
+
+  function monthKeyLabel(k){ return k.slice(0,4)+'年'+parseInt(k.slice(5,7),10)+'月'; }
+  function shiftMonth(k, delta){
+    const y = parseInt(k.slice(0,4),10), m = parseInt(k.slice(5,7),10)-1;
+    const d = new Date(y, m+delta, 1);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
+  function shiftYear(k, delta){
+    const y = parseInt(k.slice(0,4),10), m = parseInt(k.slice(5,7),10)-1;
+    return (y+delta)+'-'+String(m+1).padStart(2,'0');
+  }
+
+  function renderHistory(r, dispCur){
+    // month navigation label + currency toggle (static buttons — just sync their state each render)
+    document.getElementById('monthLabel').textContent = monthKeyLabel(currentMonthKey);
+    Array.prototype.forEach.call(document.querySelectorAll('#histCurToggle button'), function(b){
+      b.classList.toggle('sel', b.getAttribute('data-cur')===historyCurrency);
+    });
+    const cur = historyCurrency;
+
+    // ---- category totals for the selected month (always visible) ----
+    const monthTxs = txs.filter(function(t){ return monthKey(t.date)===currentMonthKey; });
+    let incJpy=0, incEur=0, expJpy=0, expEur=0;
+    const byCat = {};
+    monthTxs.forEach(function(t){
+      if (t.type==='income'){ incJpy+=t.amountJpy||0; incEur+=t.amountEur||0; }
+      else {
+        expJpy+=t.amountJpy||0; expEur+=t.amountEur||0;
+        const c = t.category||'other';
+        byCat[c] = byCat[c] || {jpy:0, eur:0};
+        byCat[c].jpy += t.amountJpy||0; byCat[c].eur += t.amountEur||0;
+      }
+    });
+    const catRows = Object.keys(byCat).map(function(c){ return {c:c, jpy:byCat[c].jpy, eur:byCat[c].eur}; })
+      .sort(function(a,b){ return b.jpy-a.jpy; });
+    const maxAmt = expJpy || 1;
+    const catHtml = catRows.length ? catRows.map(function(row){
+      const cat = CAT_MAP[row.c] || CAT_MAP.other;
+      const pct = Math.max(4, Math.round(row.jpy/maxAmt*100));
+      return '<div class="mc-cat"><div class="ic">'+svg(cat.icon,14)+'</div>'+
+        '<div class="mid"><div class="lbl"><span>'+cat.label+'</span><span class="num">'+fmtByCur(row.jpy,row.eur,cur)+'</span></div>'+
+        '<div class="bar"><i style="width:'+pct+'%"></i></div></div></div>';
+    }).join('') : '<div class="mc-empty">この月の支出記録はまだありません。</div>';
+    const net = incJpy - expJpy, netEur = incEur - expEur;
+    const netLabel = (net>=0?'+':'') + fmtByCur(net, netEur, cur);
+
+    document.getElementById('monthSummaryCard').innerHTML =
+      '<div class="month-card">'+
+        '<div class="mc-totals">'+
+          '<div class="mc-total"><div class="l">収入</div><div class="v income num">+'+fmtByCur(incJpy,incEur,cur)+'</div></div>'+
+          '<div class="mc-total"><div class="l">支出</div><div class="v spend num">-'+fmtByCur(expJpy,expEur,cur)+'</div></div>'+
+        '</div>'+
+        '<div class="mc-net">収支差引：<b class="num">'+netLabel+'</b></div>'+
+        '<div class="mc-cats">'+catHtml+'</div>'+
+      '</div>';
+
+    // ---- detail toggle + list (collapsed by default) ----
+    const detailBtn = document.getElementById('detailToggle');
+    detailBtn.textContent = detailOpen ? 'Close' : (parseInt(currentMonthKey.slice(5,7),10)+'月の詳細を見る');
+    document.getElementById('monthDetail').style.display = detailOpen ? '' : 'none';
+    if (!detailOpen) return;
+
+    const chipsEl = document.getElementById('catChips');
+    const allChips = [{id:'all', label:'すべて'}].concat(CATS).concat([{id:'income', label:'収入'}]);
+    chipsEl.innerHTML = allChips.map(function(c){
+      return '<button class="chip'+(historyFilter===c.id?' active':'')+'" data-cat="'+c.id+'">'+c.label+'</button>';
+    }).join('');
+    Array.prototype.forEach.call(chipsEl.querySelectorAll('.chip'), function(b){
+      b.onclick = function(){ historyFilter = b.getAttribute('data-cat'); render(); };
+    });
+
+    const filtered = monthTxs.filter(function(t){
+      if (historyFilter==='all') return true;
+      if (historyFilter==='income') return t.type==='income';
+      return t.category===historyFilter;
+    }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+
+    const listEl = document.getElementById('historyList');
+    listEl.innerHTML = filtered.length
+      ? '<div class="tx-list">'+filtered.map(function(t){ return txRow(t, r, dispCur, cur); }).join('')+'</div>'
+      : '<div class="empty">この条件の記録は見つかりません。</div>';
+  }
+
+  // ---------------- Settings form ----------------
+  function fillSettingsForm(st){
+    setVal('inInitial', st.initialBalanceJpy);
+    setVal('inMonthly', st.monthlyIncomeJpy);
+    setVal('inIncomeDay', st.incomeDay);
+    setVal('inStart', st.studyStart);
+    setVal('inEnd', st.studyEnd);
+    setVal('inDisplayCur', st.displayCurrency||'EUR');
+  }
+  function setVal(id, v){ const el=document.getElementById(id); if(el && v!==undefined && v!==null) el.value = v; }
+
+  document.getElementById('saveSettings').onclick = async function(){
+    const data = {
+      initialBalanceJpy: Number(document.getElementById('inInitial').value)||0,
+      monthlyIncomeJpy: Number(document.getElementById('inMonthly').value)||0,
+      incomeDay: Number(document.getElementById('inIncomeDay').value)||25,
+      studyStart: document.getElementById('inStart').value||null,
+      studyEnd: document.getElementById('inEnd').value||null,
+      displayCurrency: document.getElementById('inDisplayCur').value||'EUR',
+    };
+    settings = data;
+    const msg = document.getElementById('saveMsg');
+    if (DEMO){ msg.textContent='保存しました（デモ表示）'; render(); setTimeout(function(){msg.textContent='';},2200); return; }
+    if (!db){ msg.textContent='保存機能が利用できません'; return; }
+    try{ await db.doc('settings/main').set(data); msg.textContent='保存しました'; }
+    catch(e){ msg.textContent='保存に失敗しました。もう一度お試しください。'; }
+    setTimeout(function(){ msg.textContent=''; }, 2200);
+    render();
+  };
+
+  function renderImportCard(){
+    const c=document.getElementById('importCard'); if(!c) return;
+    c.style.display = (db && !importDone && !DEMO) ? '' : 'none';
+  }
+  (function(){
+    const btn=document.getElementById('importBtn'); let armed=false;
+    btn.onclick = async function(){
+      const msg=document.getElementById('importMsg');
+      if(!db) return;
+      if(!armed){ armed=true; btn.textContent='もう一度押すと、71件を登録します'; setTimeout(function(){ armed=false; btn.textContent='取り込む'; },6000); return; }
+      armed=false; btn.disabled=true; btn.textContent='取り込み中…'; msg.textContent='';
+      try{
+        const now = new Date().toISOString();
+        for (let i=0;i<IMPORT_SEP.length;i++){
+          const o = Object.assign({}, IMPORT_SEP[i]); const id=o.id; delete o.id; o.createdAt = now;
+          await db.collection('transactions').doc(id).set(o);
+        }
+        if (!rates){ await db.doc('rates/latest').set({EUR:177.68, USD:157.84, GBP:209.02, updatedAt:'2026-10-02T15:00:00.000Z', source:'手動設定（2026/10/2時点）'}); }
+        await db.doc('meta/import202609').set({done:true, count:IMPORT_SEP.length, at:now});
+        msg.textContent='取り込みました（'+IMPORT_SEP.length+'件）';
+      }catch(e){
+        console.error(e); msg.textContent='取り込みに失敗しました。もう一度お試しください。';
+      }
+      btn.disabled=false; btn.textContent='取り込む';
+    };
+  })();
+
+  // ---------------- Tabs ----------------
+  const screens = { home:'screen-home', history:'screen-history', settings:'screen-settings' };
+  function showTab(name){
+    Object.keys(screens).forEach(function(k){ document.getElementById(screens[k]).classList.toggle('active', k===name); });
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.toggle('active', b.getAttribute('data-tab')===name); });
+  }
+  document.getElementById('tabHome').setAttribute('data-tab','home');
+  document.getElementById('tabHistory').setAttribute('data-tab','history');
+  document.getElementById('tabSettings').setAttribute('data-tab','settings');
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(b){ b.onclick=function(){ showTab(b.getAttribute('data-tab')); }; });
+  document.getElementById('toHistory').onclick = function(){ showTab('history'); };
+
+  // ---------------- FX chip cycle ----------------
+  document.getElementById('fxChip').onclick = function(){ fxIndex = (fxIndex+1)%fxCycle.length; render(); };
+  document.getElementById('ratePill').onclick = function(){ fxIndex = (fxIndex+1)%fxCycle.length; render(); };
+
+  // ---------------- History: month navigation, currency toggle, detail collapse ----------------
+  document.getElementById('navPrev').onclick = function(){ currentMonthKey = shiftMonth(currentMonthKey,-1); render(); };
+  document.getElementById('navNext').onclick = function(){ currentMonthKey = shiftMonth(currentMonthKey,1); render(); };
+  document.getElementById('navYearPrev').onclick = function(){ currentMonthKey = shiftYear(currentMonthKey,-1); render(); };
+  document.getElementById('navYearNext').onclick = function(){ currentMonthKey = shiftYear(currentMonthKey,1); render(); };
+  document.getElementById('detailToggle').onclick = function(){ detailOpen = !detailOpen; render(); };
+  Array.prototype.forEach.call(document.querySelectorAll('#histCurToggle button'), function(b){
+    b.onclick = function(){ historyCurrency = b.getAttribute('data-cur'); render(); };
+  });
+
+  // ---------------- Category grid (sheet) ----------------
+  const catGrid = document.getElementById('catGrid');
+  catGrid.innerHTML = CATS.map(function(c){
+    return '<button type="button" class="cat-btn" data-cat="'+c.id+'"><span class="ic">'+svg(c.icon,16)+'</span><span>'+c.label+'</span></button>';
+  }).join('');
+  function refreshCatGrid(){
+    Array.prototype.forEach.call(catGrid.querySelectorAll('.cat-btn'), function(b){
+      b.classList.toggle('sel', b.getAttribute('data-cat')===txCategory);
+    });
+  }
+  catGrid.onclick = function(e){
+    const b = e.target.closest('.cat-btn'); if(!b) return;
+    txCategory = b.getAttribute('data-cat'); refreshCatGrid();
+  };
+  refreshCatGrid();
+
+  // ---------------- Add sheet ----------------
+  const overlay = document.getElementById('addOverlay');
+  function resetDeleteUI(){
+    document.getElementById('deleteConfirm').classList.remove('show');
+  }
+  function openSheet(){
+    editingId = null;
+    document.getElementById('sheetTitle').textContent = '記録を追加';
+    document.getElementById('saveTx').textContent = '保存する';
+    document.getElementById('deleteTxLink').style.display = 'none';
+    document.getElementById('createdInfo').style.display = 'none';
+    resetDeleteUI();
+    txType = 'expense'; txCurrency = 'JPY'; txCategory = 'food';
+    updateSeg(); updateCur(); refreshCatGrid();
+    document.getElementById('inDate').value = todayStr();
+    document.getElementById('inAmount').value = '';
+    document.getElementById('inMemo').value = '';
+    overlay.classList.add('show');
+  }
+  function openEditSheet(id){
+    const t = txs.find(function(x){ return String(x.id)===String(id); });
+    if (!t) return;
+    editingId = id;
+    document.getElementById('sheetTitle').textContent = '記録を編集';
+    document.getElementById('saveTx').textContent = '更新する';
+    document.getElementById('deleteTxLink').style.display = '';
+    resetDeleteUI();
+    txType = t.type; txCurrency = t.currency || 'JPY'; txCategory = t.category || 'food';
+    updateSeg(); updateCur(); refreshCatGrid();
+    document.getElementById('inDate').value = t.date || todayStr();
+    document.getElementById('inAmount').value = txCurrency==='EUR' ? t.amountEur : t.amountJpy;
+    document.getElementById('inMemo').value = t.memo || '';
+    const createdEl = document.getElementById('createdInfo');
+    if (t.createdAt){
+      const cd = new Date(t.createdAt);
+      createdEl.textContent = '登録日：'+ (isNaN(cd) ? t.createdAt : cd.toLocaleString('ja-JP',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}));
+      createdEl.style.display = '';
+    } else {
+      createdEl.style.display = 'none';
+    }
+    overlay.classList.add('show');
+  }
+  function closeSheet(){ overlay.classList.remove('show'); resetDeleteUI(); }
+  document.getElementById('fabAdd').onclick = openSheet;
+  document.getElementById('closeSheet').onclick = closeSheet;
+  overlay.onclick = function(e){ if (e.target===overlay) closeSheet(); };
+
+  // open the edit sheet when a transaction row is tapped (event delegation — rows are re-rendered often)
+  document.addEventListener('click', function(e){
+    const row = e.target.closest('.tx');
+    if (row && row.getAttribute('data-id')) openEditSheet(row.getAttribute('data-id'));
+  });
+
+  document.getElementById('deleteTxLink').onclick = function(){
+    document.getElementById('deleteConfirm').classList.add('show');
+  };
+  document.getElementById('deleteCancel').onclick = function(){ resetDeleteUI(); };
+  document.getElementById('deleteYes').onclick = async function(){
+    if (!editingId) return;
+    if (DEMO){
+      txs = txs.filter(function(t){ return String(t.id)!==String(editingId); });
+      closeSheet(); render();
+      return;
+    }
+    if (db){ try{ await db.collection('transactions').doc(String(editingId)).delete(); }catch(e){} }
+    closeSheet();
+  };
+
+  document.getElementById('segExpense').onclick = function(){ txType='expense'; updateSeg(); };
+  document.getElementById('segIncome').onclick = function(){ txType='income'; updateSeg(); };
+  function updateSeg(){
+    document.getElementById('segExpense').classList.toggle('sel', txType==='expense');
+    document.getElementById('segIncome').classList.toggle('sel', txType==='income');
+    document.getElementById('catField').style.display = txType==='expense' ? '' : 'none';
+  }
+  updateSeg();
+
+  document.getElementById('curJpy').onclick = function(){ txCurrency='JPY'; updateCur(); };
+  document.getElementById('curEur').onclick = function(){ txCurrency='EUR'; updateCur(); };
+  function updateCur(){
+    document.getElementById('curJpy').classList.toggle('sel', txCurrency==='JPY');
+    document.getElementById('curEur').classList.toggle('sel', txCurrency==='EUR');
+  }
+  updateCur();
+
+  document.getElementById('saveTx').onclick = async function(){
+    const amtRaw = parseFloat(document.getElementById('inAmount').value);
+    if (!amtRaw || amtRaw<=0){ document.getElementById('inAmount').focus(); return; }
+    const r = rates || defaultRates();
+    // corrections to an existing record keep using the rate that was in effect when it was first
+    // recorded, so fixing a memo or category never silently changes past JPY/EUR totals
+    let eurRate = r.EUR || 170;
+    if (editingId){
+      const orig = txs.find(function(t){ return String(t.id)===String(editingId); });
+      if (orig && orig.rateUsed) eurRate = orig.rateUsed;
+    }
+    let amountJpy, amountEur;
+    if (txCurrency==='JPY'){ amountJpy = amtRaw; amountEur = amtRaw/eurRate; }
+    else { amountEur = amtRaw; amountJpy = amtRaw*eurRate; }
+
+    const data = {
+      type: txType,
+      category: txType==='income' ? 'income' : txCategory,
+      amountJpy: Math.round(amountJpy),
+      amountEur: Math.round(amountEur*100)/100,
+      currency: txCurrency,
+      rateUsed: eurRate,
+      date: document.getElementById('inDate').value || todayStr(),
+      memo: document.getElementById('inMemo').value.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    if (DEMO){
+      if (editingId){
+        const idx = txs.findIndex(function(t){ return String(t.id)===String(editingId); });
+        if (idx>-1) txs[idx] = Object.assign({}, txs[idx], data);
+      } else {
+        data.id = String(Date.now());
+        txs.unshift(data);
+      }
+      closeSheet(); render();
+      return;
+    }
+    if (!db) { closeSheet(); return; }
+    try{
+      if (editingId) await db.collection('transactions').doc(String(editingId)).update(data);
+      else await db.collection('transactions').add(data);
+    }catch(e){}
+    closeSheet();
+  };
+
+  init();
+})();
+</script>
+</body>
+</html>
