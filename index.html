@@ -270,6 +270,16 @@
   }
   .btn:active{ transform:scale(.98); }
   .btn.ghost{ background:var(--surface-2); color:var(--ink); }
+  .sch-row{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .sch-row:last-of-type{ border-bottom:none; }
+  .sch-main{ flex:1; min-width:0; }
+  .sch-main b{ display:block; font-size:14.5px; font-weight:800; }
+  .sch-main span{ font-size:12px; color:var(--ink-faint); font-weight:600; }
+  .sch-amt{ font-weight:800; font-size:15px; }
+  .sch-actions{ width:100%; display:flex; justify-content:flex-end; gap:4px; }
+  .sch-actions button{ background:none; border:none; color:var(--accent); font-weight:800; font-size:12.5px; padding:6px 8px; cursor:pointer; }
+  .sch-actions button.danger{ color:var(--spend); }
+  .sch-note{ font-size:12px; color:var(--ink-faint); font-weight:600; line-height:1.5; margin:0 0 12px; }
   .save-msg{ text-align:center; font-size:12.5px; font-weight:700; color:var(--income); height:16px; margin-top:8px; }
 
   /* ---------- Bottom nav ---------- */
@@ -381,14 +391,14 @@
           <div class="d" id="statMonthSpendSub">&nbsp;</div>
         </div>
         <div class="stat">
-          <div class="t">次回の仕送り予定</div>
+          <div class="t">次回の入金予定</div>
           <div class="v income num" id="statNextIncome">—</div>
           <div class="d" id="statNextIncomeSub">&nbsp;</div>
         </div>
         <div class="stat">
           <div class="t">予測残高</div>
           <div class="v num" id="statProjected">—</div>
-          <div class="d">次回仕送り反映後</div>
+          <div class="d">今月の入金予定を含む</div>
         </div>
         <div class="stat">
           <div class="t">1日あたりの目安</div>
@@ -442,19 +452,43 @@
         </div>
       </div>
 
-      <div class="card">
-        <h3>毎月の仕送り・奨学金</h3>
-        <p class="hint">毎月決まって振り込まれる金額を入れておくと、「次回の仕送り予定」と「予測残高」に反映されます。実際に振り込まれたら、＋ボタンから「収入」として記録してください。</p>
-        <div class="two-col">
+      <div class="card" id="schedCard">
+        <h3>定期の入金（仕送り・お小遣いなど）</h3>
+        <p class="hint">毎月決まった日に決まった金額が入る予定を登録します。入金日を過ぎたあとにアプリを開くと、「収入」の記録が自動で作られます。金額は円で入力します。</p>
+        <div id="schedList"></div>
+        <div id="schedLegacy" style="display:none"></div>
+        <div id="schedForm" style="display:none">
           <div class="field">
-            <label for="inMonthly">金額（円/月）</label>
-            <input type="number" id="inMonthly" inputmode="numeric" placeholder="例）100000">
+            <label for="schName">名前</label>
+            <input type="text" id="schName" maxlength="20" placeholder="例）仕送り、お小遣い">
           </div>
-          <div class="field">
-            <label for="inIncomeDay">振込日（毎月）</label>
-            <input type="number" id="inIncomeDay" inputmode="numeric" min="1" max="28" placeholder="例）25">
+          <div class="two-col">
+            <div class="field">
+              <label for="schAmount">金額（円）</label>
+              <input type="number" id="schAmount" inputmode="numeric" placeholder="例）100000">
+            </div>
+            <div class="field">
+              <label for="schDay">入金日（毎月）</label>
+              <input type="number" id="schDay" inputmode="numeric" min="1" max="28" placeholder="1〜28">
+            </div>
           </div>
+          <div class="two-col">
+            <div class="field">
+              <label for="schStart">開始月</label>
+              <input type="month" id="schStart">
+            </div>
+            <div class="field">
+              <label for="schEnd">終了月（任意）</label>
+              <input type="month" id="schEnd">
+            </div>
+          </div>
+          <p class="sch-note" id="schPreview"></p>
+          <button class="btn" id="schSave">この内容で登録する</button>
+          <button type="button" class="link-btn" id="schCancel">キャンセル</button>
         </div>
+        <button class="btn ghost" id="schAdd">＋ 入金予定を追加</button>
+        <div class="save-msg" id="schMsg"></div>
+        <p class="sch-note" style="margin:10px 0 0">入金日は1〜28日で指定できます。同じ月に、同じ金額の収入がすでに手入力されている場合は、二重にならないよう自動記録を飛ばします。予定を削除しても、これまでの記録は消えません。</p>
       </div>
 
       <div class="card">
@@ -650,7 +684,9 @@ const firebaseConfig = {
 
   // ---------------- State ----------------
   let db = null;
-  let settings = null;      // {initialBalanceJpy, monthlyIncomeJpy, incomeDay, studyStart, studyEnd, displayCurrency}
+  let settings = null;      // {initialBalanceJpy, studyStart, studyEnd, displayCurrency, (旧)monthlyIncomeJpy, (旧)incomeDay}
+  let schedules = [];       // 定期の入金 [{id, name, amountJpy, day, startMonth, endMonth, lastGenerated}]
+  let schedLoaded = false, txLoaded = false, ratesLoaded = false;
   let rates = null;         // {EUR, USD, GBP, updatedAt}
   let txs = [];             // array of {id, type, category, amountJpy, amountEur, currency, rateUsed, date, memo, createdAt}
   let fxCycle = ['EUR','USD','GBP'];
@@ -667,6 +703,7 @@ const firebaseConfig = {
   function seedDemo(){
     settings = {initialBalanceJpy:300000, monthlyIncomeJpy:100000, incomeDay:25, studyStart:'2026-09-01', studyEnd:'2027-07-31', displayCurrency:'EUR'};
     rates = {EUR:172.4, USD:148.6, GBP:198.9, updatedAt:new Date().toISOString()};
+    schedules = [{id:'demo1', name:'仕送り', amountJpy:100000, day:25, startMonth:'2026-09', endMonth:null, lastGenerated:null}];
     const today = new Date();
     function d(off){ const x=new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); }
     function dt(off){ const x=new Date(today); x.setDate(x.getDate()-off); x.setHours(9+off%6, 15, 0, 0); return x.toISOString(); }
@@ -749,13 +786,91 @@ const firebaseConfig = {
 
     db.doc('rates/latest').onSnapshot(function(snap){
       rates = snap.exists ? snap.data() : null;
+      ratesLoaded = true;
       render();
+      maybeGenerate();
+    }, function(){});
+
+    db.collection('schedules').onSnapshot(function(qs){
+      schedules = qs.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; })
+        .sort(function(a,b){ return (a.day||0)-(b.day||0) || String(a.name||'').localeCompare(String(b.name||'')); });
+      schedLoaded = true;
+      render();
+      maybeGenerate();
     }, function(){});
 
     db.collection('transactions').orderBy('date','desc').limit(500).onSnapshot(function(qs){
       txs = qs.docs.map(function(d){ const v=d.data(); v.id=d.id; return v; });
+      txLoaded = true;
       render();
+      maybeGenerate();
     }, function(){});
+  }
+
+  // ---------------- 定期の入金（スケジュール） ----------------
+  function pad2(n){ return (n<10?'0':'')+n; }
+  function localToday(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+  function addMonth(m, n){ const d=new Date(+m.slice(0,4), (+m.slice(5,7))-1+n, 1); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
+  function schedDue(s, m){ return m+'-'+pad2(Math.min(28, Math.max(1, Math.round(s.day)||1))); }
+  // まだ記録していない「入金日を過ぎた月」の一覧
+  function pendingMonths(s, today){
+    const out=[]; if(!s.startMonth) return out;
+    let m = s.lastGenerated ? addMonth(s.lastGenerated,1) : s.startMonth;
+    if (m < s.startMonth) m = s.startMonth;
+    const last = today.slice(0,7);
+    for (let i=0; i<240 && m<=last; i++){
+      if (s.endMonth && m > s.endMonth) break;
+      if (schedDue(s,m) > today) break;
+      out.push(m); m = addMonth(m,1);
+    }
+    return out;
+  }
+  // 次の入金日（今日より後）
+  function nextOccurrence(s, today){
+    let m = today.slice(0,7);
+    if (s.startMonth && m < s.startMonth) m = s.startMonth;
+    for (let i=0; i<14; i++){
+      if (s.endMonth && m > s.endMonth) return null;
+      const d = schedDue(s,m);
+      if (d > today) return d;
+      m = addMonth(m,1);
+    }
+    return null;
+  }
+
+  let genRunning = false, genAgain = false;
+  async function maybeGenerate(){
+    if (DEMO || !db || !schedLoaded || !txLoaded || !ratesLoaded) return;
+    if (genRunning){ genAgain = true; return; }
+    genRunning = true;
+    try{
+      const today = localToday();
+      const eurRate = (rates && rates.EUR) ? rates.EUR : null;   // 為替レートが未登録でも円の記録は作る（ユーロ換算は表示時に計算）
+      for (const s of schedules){
+        if (!s.id || !(s.amountJpy>0)) continue;
+        const months = pendingMonths(s, today);
+        if (!months.length) continue;
+        const amt = Math.round(s.amountJpy);
+        let doneUpTo = null;
+        for (const m of months){
+          const txId = 'sch_'+s.id+'_'+m.replace('-','');
+          const exists = txs.some(function(t){ return t.id===txId; });
+          const manual = txs.some(function(t){ return t.type==='income' && !t.scheduleId && monthKey(t.date)===m && Math.round(t.amountJpy||0)===amt; });
+          if (!exists && !manual){
+            await db.collection('transactions').doc(txId).set({
+              type:'income', category:'income', amountJpy:amt,
+              amountEur: eurRate ? Math.round(amt/eurRate*100)/100 : null, currency:'JPY', rateUsed:eurRate,
+              date: schedDue(s,m), memo:(s.name||'入金')+'（自動記録）',
+              createdAt:new Date().toISOString(), scheduleId:s.id, auto:true
+            });
+          }
+          doneUpTo = m;
+        }
+        if (doneUpTo) await db.doc('schedules/'+s.id).update({lastGenerated: doneUpTo});
+      }
+    }catch(e){ console.error('Cambio: 定期入金の自動記録に失敗しました', e); }
+    genRunning = false;
+    if (genAgain){ genAgain = false; maybeGenerate(); }
   }
 
   function defaultRates(){ return {EUR:170, USD:145, GBP:195, updatedAt:null}; }
@@ -782,9 +897,34 @@ const firebaseConfig = {
     });
     const receivedThisMonth = monthIncome > 0;
 
-    let nextDate = new Date(today.getFullYear(), today.getMonth(), st.incomeDay||25);
-    if (receivedThisMonth || nextDate < today) nextDate = new Date(today.getFullYear(), today.getMonth()+1, st.incomeDay||25);
-    const projectedBalance = currentBalance + (receivedThisMonth ? 0 : (st.monthlyIncomeJpy||0));
+    const todayS = localToday();
+    let nextInfo = null, projectedBalance;
+    if (schedules.length){
+      const occ = [];
+      let remainThisMonth = 0;
+      schedules.forEach(function(sc){
+        const d = nextOccurrence(sc, todayS);
+        if (!d) return;
+        occ.push({date:d, amount:sc.amountJpy||0, label:sc.name||'入金'});
+        if (d.slice(0,7)===todayS.slice(0,7)) remainThisMonth += (sc.amountJpy||0);
+      });
+      occ.sort(function(a,b){ return a.date<b.date ? -1 : (a.date>b.date ? 1 : 0); });
+      if (occ.length){
+        const first = occ[0].date;
+        const same = occ.filter(function(o){ return o.date===first; });
+        nextInfo = {date:first, amount:same.reduce(function(a,o){ return a+o.amount; },0), label:same.map(function(o){ return o.label; }).join('・')};
+      }
+      projectedBalance = currentBalance + remainThisMonth;
+    } else {
+      // 旧設定（毎月の仕送り額・入金日）が残っている場合の表示
+      if (st.monthlyIncomeJpy){
+        const inc = Number(st.incomeDay)||25;
+        let nd = new Date(today.getFullYear(), today.getMonth(), inc);
+        if (receivedThisMonth || nd < today) nd = new Date(today.getFullYear(), today.getMonth()+1, inc);
+        nextInfo = {date: nd.getFullYear()+'-'+pad2(nd.getMonth()+1)+'-'+pad2(nd.getDate()), amount: st.monthlyIncomeJpy, label:'仕送り'};
+      }
+      projectedBalance = currentBalance + (receivedThisMonth ? 0 : (st.monthlyIncomeJpy||0));
+    }
 
     let daysLeft = null;
     if (st.studyEnd){
@@ -793,9 +933,11 @@ const firebaseConfig = {
     }
     const dailyBudget = (daysLeft && daysLeft>0) ? projectedBalance/daysLeft : null;
 
-    return {r, st, currentBalance, monthSpend, monthIncome, nextDate, monthlyIncome: st.monthlyIncomeJpy||0, projectedBalance, daysLeft, dailyBudget, receivedThisMonth};
+    return {r, st, currentBalance, monthSpend, monthIncome, nextInfo, projectedBalance, daysLeft, dailyBudget, receivedThisMonth};
   }
 
+  // 記録にユーロ金額が保存されていないとき（レート未登録で自動記録した収入など）は、表示時のレートで換算
+  function eurOf(t, r){ return (t.amountEur!=null) ? t.amountEur : ((t.amountJpy||0) / ((r && r.EUR) || 170)); }
   function toForeign(jpy, cur, r){ if(!r || !r[cur]) return null; return jpy / r[cur]; }
 
   // ---------------- Render ----------------
@@ -822,8 +964,15 @@ const firebaseConfig = {
     const monthForeign = toForeign(c.monthSpend, c.st.displayCurrency||'EUR', r);
     document.getElementById('statMonthSpendSub').textContent = monthForeign==null ? '' : ('≈ '+SYM[c.st.displayCurrency||'EUR']+fmtForeign(monthForeign, c.st.displayCurrency||'EUR'));
 
-    document.getElementById('statNextIncome').textContent = c.monthlyIncome ? ('¥'+fmtJpy(c.monthlyIncome)) : '未設定';
-    document.getElementById('statNextIncomeSub').textContent = c.monthlyIncome ? (c.nextDate.getMonth()+1)+'月'+c.nextDate.getDate()+'日 予定' : '設定タブで入力';
+    if (c.nextInfo){
+      const nd = c.nextInfo.date;
+      document.getElementById('statNextIncome').textContent = '¥'+fmtJpy(c.nextInfo.amount);
+      document.getElementById('statNextIncomeSub').textContent = (+nd.slice(5,7))+'月'+(+nd.slice(8,10))+'日 '+c.nextInfo.label+' 予定';
+    } else {
+      document.getElementById('statNextIncome').textContent = '未設定';
+      document.getElementById('statNextIncomeSub').textContent = '設定タブで入力';
+    }
+    renderSchedules();
 
     document.getElementById('statProjected').textContent = '¥'+fmtJpy(c.projectedBalance);
     document.getElementById('statDaily').textContent = c.dailyBudget==null ? '—' : ('¥'+fmtJpy(c.dailyBudget));
@@ -850,12 +999,12 @@ const firebaseConfig = {
     const dateLabel = isNaN(d) ? '' : (d.getMonth()+1)+'/'+d.getDate();
     let mainLine, subLine;
     if (forceCur==='EUR'){
-      mainLine = (isIncome?'+':'-')+'€'+fmtForeign(t.amountEur,'EUR');
+      mainLine = (isIncome?'+':'-')+'€'+fmtForeign(eurOf(t,r),'EUR');
       subLine = '¥'+fmtJpy(t.amountJpy);
     } else {
       // EUR has a value stored on the record itself (accurate at entry time); other
       // currencies aren't stored per-transaction, so those fall back to today's rate.
-      const foreign = dispCur==='EUR' ? t.amountEur : toForeign(t.amountJpy, dispCur, r);
+      const foreign = dispCur==='EUR' ? eurOf(t,r) : toForeign(t.amountJpy, dispCur, r);
       mainLine = (isIncome?'+':'-')+'¥'+fmtJpy(t.amountJpy);
       subLine = (foreign==null) ? '' : (SYM[dispCur]+fmtForeign(foreign,dispCur));
     }
@@ -899,12 +1048,12 @@ const firebaseConfig = {
     let incJpy=0, incEur=0, expJpy=0, expEur=0;
     const byCat = {};
     monthTxs.forEach(function(t){
-      if (t.type==='income'){ incJpy+=t.amountJpy||0; incEur+=t.amountEur||0; }
+      if (t.type==='income'){ incJpy+=t.amountJpy||0; incEur+=eurOf(t,r)||0; }
       else {
-        expJpy+=t.amountJpy||0; expEur+=t.amountEur||0;
+        expJpy+=t.amountJpy||0; expEur+=eurOf(t,r)||0;
         const c = t.category||'other';
         byCat[c] = byCat[c] || {jpy:0, eur:0};
-        byCat[c].jpy += t.amountJpy||0; byCat[c].eur += t.amountEur||0;
+        byCat[c].jpy += t.amountJpy||0; byCat[c].eur += eurOf(t,r)||0;
       }
     });
     const catRows = Object.keys(byCat).map(function(c){ return {c:c, jpy:byCat[c].jpy, eur:byCat[c].eur}; })
@@ -960,8 +1109,6 @@ const firebaseConfig = {
   // ---------------- Settings form ----------------
   function fillSettingsForm(st){
     setVal('inInitial', st.initialBalanceJpy);
-    setVal('inMonthly', st.monthlyIncomeJpy);
-    setVal('inIncomeDay', st.incomeDay);
     setVal('inStart', st.studyStart);
     setVal('inEnd', st.studyEnd);
     setVal('inDisplayCur', st.displayCurrency||'EUR');
@@ -969,14 +1116,12 @@ const firebaseConfig = {
   function setVal(id, v){ const el=document.getElementById(id); if(el && v!==undefined && v!==null) el.value = v; }
 
   document.getElementById('saveSettings').onclick = async function(){
-    const data = {
+    const data = Object.assign({}, settings||{}, {
       initialBalanceJpy: Number(document.getElementById('inInitial').value)||0,
-      monthlyIncomeJpy: Number(document.getElementById('inMonthly').value)||0,
-      incomeDay: Number(document.getElementById('inIncomeDay').value)||25,
       studyStart: document.getElementById('inStart').value||null,
       studyEnd: document.getElementById('inEnd').value||null,
       displayCurrency: document.getElementById('inDisplayCur').value||'EUR',
-    };
+    });
     settings = data;
     const msg = document.getElementById('saveMsg');
     if (DEMO){ msg.textContent='保存しました（デモ表示）'; render(); setTimeout(function(){msg.textContent='';},2200); return; }
@@ -985,6 +1130,115 @@ const firebaseConfig = {
     catch(e){ msg.textContent='保存に失敗しました。もう一度お試しください。'; }
     setTimeout(function(){ msg.textContent=''; }, 2200);
     render();
+  };
+
+  // ---------------- 定期の入金：設定画面 ----------------
+  let editingSchedId = null, migratingLegacy = false, schDelArmed = null;
+  function schedSummary(s){
+    return '毎月'+(Math.round(s.day)||1)+'日 ・ '+(s.startMonth||'').replace('-','/')+'から'+(s.endMonth ? (' '+s.endMonth.replace('-','/')+'まで') : '');
+  }
+  function renderSchedules(){
+    const el = document.getElementById('schedList'); if(!el) return;
+    el.innerHTML = schedules.length ? schedules.map(function(s){
+      return '<div class="sch-row" data-id="'+escapeHtml(s.id)+'">'+
+        '<div class="sch-main"><b>'+escapeHtml(s.name||'入金')+'</b><span>'+escapeHtml(schedSummary(s))+'</span></div>'+
+        '<div class="sch-amt">¥'+fmtJpy(s.amountJpy)+'</div>'+
+        '<div class="sch-actions"><button type="button" data-act="edit">編集</button><button type="button" class="danger" data-act="del">'+(schDelArmed===s.id?'もう一度押すと削除':'削除')+'</button></div>'+
+      '</div>';
+    }).join('') : '<p class="sch-note">まだ登録がありません。「＋ 入金予定を追加」から登録してください。</p>';
+
+    // 旧設定の引き継ぎ
+    const lg = document.getElementById('schedLegacy');
+    if (lg){
+      const show = (!schedules.length && settings && settings.monthlyIncomeJpy>0 && document.getElementById('schedForm').style.display==='none');
+      lg.style.display = show ? '' : 'none';
+      if (show) lg.innerHTML = '<p class="sch-note">これまでの設定（毎月¥'+fmtJpy(settings.monthlyIncomeJpy)+'・'+(Number(settings.incomeDay)||25)+'日）があります。</p><button type="button" class="btn ghost" id="schMigrate" style="margin-bottom:12px">この内容を引き継ぐ</button>';
+    }
+  }
+  function openSchedForm(s, legacy){
+    editingSchedId = s ? s.id : null; migratingLegacy = !!legacy;
+    document.getElementById('schName').value = s ? (s.name||'') : (legacy ? '仕送り' : '');
+    document.getElementById('schAmount').value = s ? s.amountJpy : (legacy ? settings.monthlyIncomeJpy : '');
+    document.getElementById('schDay').value = s ? s.day : (legacy ? (Number(settings.incomeDay)||25) : '');
+    const defStart = (settings && settings.studyStart) ? settings.studyStart.slice(0,7) : localToday().slice(0,7);
+    document.getElementById('schStart').value = s ? (s.startMonth||defStart) : defStart;
+    document.getElementById('schStart').disabled = !!s;       // 開始月は登録後は変更できません
+    document.getElementById('schEnd').value = (s && s.endMonth) ? s.endMonth : '';
+    document.getElementById('schedForm').style.display = '';
+    document.getElementById('schAdd').style.display = 'none';
+    document.getElementById('schedLegacy').style.display = 'none';
+    updateSchedPreview();
+    document.getElementById('schName').focus();
+  }
+  function closeSchedForm(){
+    editingSchedId = null; migratingLegacy = false;
+    document.getElementById('schedForm').style.display = 'none';
+    document.getElementById('schAdd').style.display = '';
+    renderSchedules();
+  }
+  function readSchedForm(){
+    return {
+      name: document.getElementById('schName').value.trim() || '入金',
+      amountJpy: Math.round(Number(document.getElementById('schAmount').value)||0),
+      day: Math.round(Number(document.getElementById('schDay').value)||0),
+      startMonth: document.getElementById('schStart').value || '',
+      endMonth: document.getElementById('schEnd').value || null
+    };
+  }
+  function updateSchedPreview(){
+    const el = document.getElementById('schPreview'); if(!el) return;
+    const f = readSchedForm();
+    if (editingSchedId){ el.textContent = '金額・日にちの変更は、これから先の入金に反映されます。すでに記録された分は変わりません。'; return; }
+    if (!f.startMonth || !(f.day>=1 && f.day<=28) || !(f.amountJpy>0)){ el.textContent=''; return; }
+    const ms = pendingMonths({day:f.day, startMonth:f.startMonth, endMonth:f.endMonth, lastGenerated:null}, localToday());
+    if (!ms.length){ el.textContent = '今日までに入金日を迎える分はありません。入金日になると自動で記録されます。'; return; }
+    const total = ms.length * f.amountJpy;
+    el.textContent = '登録すると、過去'+ms.length+'回分（合計¥'+fmtJpy(total)+'）の収入を自動で記録します：'+ms.map(function(m){ return (+m.slice(5,7))+'/'+f.day; }).join('、');
+  }
+  ['schName','schAmount','schDay','schStart','schEnd'].forEach(function(id){
+    const e=document.getElementById(id); if(e) e.addEventListener('input', updateSchedPreview);
+  });
+  document.getElementById('schAdd').onclick = function(){ openSchedForm(null,false); };
+  document.getElementById('schCancel').onclick = closeSchedForm;
+  document.getElementById('schedLegacy').addEventListener('click', function(ev){
+    if (ev.target && ev.target.id==='schMigrate') openSchedForm(null,true);
+  });
+  document.getElementById('schedList').addEventListener('click', async function(ev){
+    const btn = ev.target.closest('button[data-act]'); if(!btn) return;
+    const row = btn.closest('.sch-row'); const id = row && row.getAttribute('data-id');
+    const s = schedules.find(function(x){ return x.id===id; }); if(!s) return;
+    if (btn.getAttribute('data-act')==='edit'){ openSchedForm(s,false); return; }
+    if (schDelArmed!==id){ schDelArmed=id; renderSchedules(); setTimeout(function(){ if(schDelArmed===id){ schDelArmed=null; renderSchedules(); } },5000); return; }
+    schDelArmed=null;
+    const msg=document.getElementById('schMsg');
+    if (DEMO){ schedules = schedules.filter(function(x){ return x.id!==id; }); renderSchedules(); render(); return; }
+    try{ await db.doc('schedules/'+id).delete(); msg.textContent='削除しました（これまでの記録は残っています）'; }
+    catch(e){ msg.textContent='削除に失敗しました。もう一度お試しください。'; }
+    setTimeout(function(){ msg.textContent=''; },3000);
+  });
+  document.getElementById('schSave').onclick = async function(){
+    const msg=document.getElementById('schMsg'); const f=readSchedForm();
+    if (!(f.amountJpy>0)){ msg.textContent='金額を入力してください'; document.getElementById('schAmount').focus(); return; }
+    if (!(f.day>=1 && f.day<=28)){ msg.textContent='入金日は1〜28で入力してください'; document.getElementById('schDay').focus(); return; }
+    if (!f.startMonth){ msg.textContent='開始月を選んでください'; return; }
+    if (f.endMonth && f.endMonth < f.startMonth){ msg.textContent='終了月は開始月より後にしてください'; return; }
+    try{
+      if (DEMO){
+        if (editingSchedId){ schedules = schedules.map(function(x){ return x.id===editingSchedId ? Object.assign({}, x, {name:f.name, amountJpy:f.amountJpy, day:f.day, endMonth:f.endMonth}) : x; }); }
+        else schedules.push({id:'demo'+Date.now(), name:f.name, amountJpy:f.amountJpy, day:f.day, startMonth:f.startMonth, endMonth:f.endMonth, lastGenerated:null});
+        closeSchedForm(); render(); return;
+      }
+      if (!db){ msg.textContent='保存機能が利用できません'; return; }
+      if (editingSchedId){
+        await db.doc('schedules/'+editingSchedId).update({name:f.name, amountJpy:f.amountJpy, day:f.day, endMonth:f.endMonth});
+      } else {
+        await db.collection('schedules').add({name:f.name, amountJpy:f.amountJpy, day:f.day, startMonth:f.startMonth, endMonth:f.endMonth, lastGenerated:null, createdAt:new Date().toISOString()});
+        if (migratingLegacy) await db.doc('settings/main').update({monthlyIncomeJpy:0});
+      }
+      closeSchedForm();
+      msg.textContent='登録しました';
+    }catch(e){ msg.textContent='登録に失敗しました。もう一度お試しください。'; }
+    setTimeout(function(){ msg.textContent=''; },3000);
   };
 
   function renderImportCard(){
